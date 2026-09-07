@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -76,5 +77,33 @@ func TestAdministrativeListsReleaseSingleSQLiteConnection(t *testing.T) {
 	}
 	if _, err = s.ListPolicies(ctx); err != nil {
 		t.Fatalf("list policies blocked with a single SQLite connection: %v", err)
+	}
+}
+
+func TestAuditRoundTrip(t *testing.T) {
+	s, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s.Close() }()
+	ctx := context.Background()
+	want := json.RawMessage(`{"terminal_session":"test-session"}`)
+	if err = s.Audit(ctx, AuditEvent{
+		Username: "admin",
+		Action:   "EXEC_START",
+		Result:   "success",
+		Metadata: want,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	events, err := s.ListAudit(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected one audit event, got %d", len(events))
+	}
+	if string(events[0].Metadata) != string(want) {
+		t.Fatalf("unexpected metadata: got %s, want %s", events[0].Metadata, want)
 	}
 }

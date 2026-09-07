@@ -658,9 +658,11 @@ func (s *Store) ListAudit(ctx context.Context, limit int) ([]AuditEvent, error) 
 	var out []AuditEvent
 	for rows.Next() {
 		var e AuditEvent
-		if err = rows.Scan(&e.ID, &e.Timestamp, &e.UserID, &e.Username, &e.SourceIP, &e.Action, &e.ResourceType, &e.ResourceID, &e.Result, &e.Reason, &e.SessionID, &e.Metadata); err != nil {
+		var metadata string
+		if err = rows.Scan(&e.ID, &e.Timestamp, &e.UserID, &e.Username, &e.SourceIP, &e.Action, &e.ResourceType, &e.ResourceID, &e.Result, &e.Reason, &e.SessionID, &metadata); err != nil {
 			return nil, err
 		}
+		e.Metadata = json.RawMessage(metadata)
 		out = append(out, e)
 	}
 	return out, rows.Err()
