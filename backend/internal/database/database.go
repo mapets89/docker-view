@@ -277,12 +277,21 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
 	var ids []string
 	for rows.Next() {
 		var id string
-		_ = rows.Scan(&id)
+		if err = rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
 		ids = append(ids, id)
+	}
+	if err = rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	if err = rows.Close(); err != nil {
+		return nil, err
 	}
 	var out []User
 	for _, id := range ids {
@@ -378,26 +387,44 @@ func (s *Store) ListRoles(ctx context.Context) ([]Role, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
 	var out []Role
 	for rows.Next() {
 		var r Role
 		if err = rows.Scan(&r.ID, &r.Name, &r.Description, &r.Builtin); err != nil {
+			_ = rows.Close()
 			return nil, err
 		}
-		pr, e := s.DB.QueryContext(ctx, `SELECT permission FROM role_permissions WHERE role_id=? ORDER BY permission`, r.ID)
+		out = append(out, r)
+	}
+	if err = rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	if err = rows.Close(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		pr, e := s.DB.QueryContext(ctx, `SELECT permission FROM role_permissions WHERE role_id=? ORDER BY permission`, out[i].ID)
 		if e != nil {
 			return nil, e
 		}
 		for pr.Next() {
 			var p string
-			_ = pr.Scan(&p)
-			r.Permissions = append(r.Permissions, p)
+			if e = pr.Scan(&p); e != nil {
+				_ = pr.Close()
+				return nil, e
+			}
+			out[i].Permissions = append(out[i].Permissions, p)
 		}
-		_ = pr.Close()
-		out = append(out, r)
+		if e = pr.Err(); e != nil {
+			_ = pr.Close()
+			return nil, e
+		}
+		if e = pr.Close(); e != nil {
+			return nil, e
+		}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 func (s *Store) SaveRole(ctx context.Context, r Role) (Role, error) {
 	if strings.TrimSpace(r.Name) == "" || len(r.Name) > 64 {
@@ -472,27 +499,45 @@ func (s *Store) ListPolicies(ctx context.Context) ([]Policy, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
 	var out []Policy
 	for rows.Next() {
 		var p Policy
 		if err = rows.Scan(&p.ID, &p.Name, &p.Description, &p.Enabled); err != nil {
+			_ = rows.Close()
 			return nil, err
 		}
-		rr, e := s.DB.QueryContext(ctx, `SELECT id,effect,action,COALESCE(subject_role_id,''),match_type,match_key,match_value,priority FROM policy_rules WHERE policy_id=? ORDER BY priority DESC`, p.ID)
+		out = append(out, p)
+	}
+	if err = rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	if err = rows.Close(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		rr, e := s.DB.QueryContext(ctx, `SELECT id,effect,action,COALESCE(subject_role_id,''),match_type,match_key,match_value,priority FROM policy_rules WHERE policy_id=? ORDER BY priority DESC`, out[i].ID)
 		if e != nil {
 			return nil, e
 		}
 		for rr.Next() {
 			var r PolicyRule
-			r.PolicyID = p.ID
-			_ = rr.Scan(&r.ID, &r.Effect, &r.Action, &r.SubjectRoleID, &r.MatchType, &r.MatchKey, &r.MatchValue, &r.Priority)
-			p.Rules = append(p.Rules, r)
+			r.PolicyID = out[i].ID
+			if e = rr.Scan(&r.ID, &r.Effect, &r.Action, &r.SubjectRoleID, &r.MatchType, &r.MatchKey, &r.MatchValue, &r.Priority); e != nil {
+				_ = rr.Close()
+				return nil, e
+			}
+			out[i].Rules = append(out[i].Rules, r)
 		}
-		_ = rr.Close()
-		out = append(out, p)
+		if e = rr.Err(); e != nil {
+			_ = rr.Close()
+			return nil, e
+		}
+		if e = rr.Close(); e != nil {
+			return nil, e
+		}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 func (s *Store) SavePolicy(ctx context.Context, p Policy) (Policy, error) {
 	if len(strings.TrimSpace(p.Name)) < 1 || len(p.Name) > 100 {

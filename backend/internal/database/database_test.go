@@ -53,3 +53,28 @@ func TestExpiredSessionRejected(t *testing.T) {
 		t.Fatalf("expired session accepted: %v", err)
 	}
 }
+
+func TestAdministrativeListsReleaseSingleSQLiteConnection(t *testing.T) {
+	s, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s.Close() }()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if _, err = s.BootstrapAdmin(ctx, "admin", "correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.SavePolicy(ctx, Policy{Name: "test-policy", Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.ListUsers(ctx); err != nil {
+		t.Fatalf("list users blocked with a single SQLite connection: %v", err)
+	}
+	if _, err = s.ListRoles(ctx); err != nil {
+		t.Fatalf("list roles blocked with a single SQLite connection: %v", err)
+	}
+	if _, err = s.ListPolicies(ctx); err != nil {
+		t.Fatalf("list policies blocked with a single SQLite connection: %v", err)
+	}
+}
