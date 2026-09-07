@@ -1,0 +1,29 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Terminal" page="terminal"
+  ><div class="terminal-warning">
+    <b>Privileged capability</b><span
+      >Exec may expose application secrets and is always audited. System
+      containers are blocked.</span
+    >
+  </div><div class="toolbar">
+    <select id="terminal-container"
+      ><option value="">Select a container…</option></select
+    ><select id="terminal-shell"
+      ><option value="auto">Auto-detect shell</option><option>/bin/bash</option
+      ><option>/bin/sh</option><option>/bin/ash</option></select
+    ><button class="primary small" id="terminal-connect">Connect</button><button
+      class="danger small"
+      id="terminal-disconnect"
+      disabled>Disconnect</button
+    ><span class="count" id="terminal-duration">Disconnected</span>
+  </div><section class="terminal-panel xterm-wrap">
+    <div class="terminal-chrome">
+      <span></span><span></span><span></span><b id="terminal-state"
+        >No active session</b
+      >
+    </div><div id="terminal" aria-label="Interactive container terminal"></div>
+  </section></AppLayout
+>

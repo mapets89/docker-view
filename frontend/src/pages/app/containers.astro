@@ -1,0 +1,39 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Containers" page="containers"
+  ><div class="toolbar">
+    <label class="search"
+      ><span>⌕</span><input
+        id="container-search"
+        placeholder="Search name or image"
+      /></label
+    ><select id="status-filter" aria-label="Filter by status"
+      ><option value="">All states</option><option>running</option><option
+        >exited</option
+      ><option>paused</option></select
+    ><span class="count" id="container-count">— containers</span>
+  </div><section class="panel flush">
+    <div class="table-wrap">
+      <table>
+        <thead
+          ><tr
+            ><th data-sort="name">Name</th><th>Status</th><th>Health</th><th
+              >Image</th
+            ><th>CPU</th><th>RAM</th><th>Uptime</th><th>Ports</th><th>Risk</th
+            ><th></th></tr
+          ></thead
+        ><tbody id="containers-table"
+          ><tr><td colspan="10" class="empty">Loading inventory…</td></tr
+          ></tbody
+        >
+      </table>
+    </div>
+  </section><dialog id="container-detail">
+    <button class="dialog-close" aria-label="Close">×</button><div
+      id="container-detail-content"
+    >
+    </div>
+  </dialog></AppLayout
+>

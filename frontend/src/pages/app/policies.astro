@@ -1,0 +1,33 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Policies" page="policies" eyebrow="Administration"
+  ><div class="page-actions">
+    <p>
+      Explicit deny takes priority over allow, role permission, and default
+      deny.
+    </p><button class="primary small" id="new-policy">+ New policy</button>
+  </div><div class="card-grid" id="policies-grid">
+    <article class="panel empty">Loading policies…</article>
+  </div><dialog id="policy-dialog">
+    <button class="dialog-close">×</button><form id="policy-form">
+      <p class="kicker">Resource policy</p><h2>Simple matching rules</h2><input
+        type="hidden"
+        name="id"
+      /><label>Name<input name="name" required maxlength="100" /></label><label
+        >Description<textarea name="description" maxlength="500"
+        ></textarea></label
+      ><label class="check"
+        ><input name="enabled" type="checkbox" checked /> Enabled</label
+      ><div id="policy-rules"></div><button
+        class="secondary"
+        type="button"
+        id="add-rule">+ Add rule</button
+      ><button class="primary" type="submit">Save policy</button><p
+        class="form-error"
+      >
+      </p>
+    </form>
+  </dialog></AppLayout
+>

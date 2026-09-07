@@ -1,0 +1,35 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Audit" page="audit" eyebrow="Administration"
+  ><div class="toolbar">
+    <label class="search"
+      ><span>⌕</span><input
+        id="audit-search"
+        placeholder="Filter user, action, resource"
+      /></label
+    ><select id="audit-result"
+      ><option value="">All results</option><option value="success"
+        >Success</option
+      ><option value="denied">Denied</option><option value="failed"
+        >Failed</option
+      ></select
+    ><span class="count">SQLite operational audit</span>
+  </div><section class="panel flush">
+    <div class="table-wrap">
+      <table>
+        <thead
+          ><tr
+            ><th>Time</th><th>User</th><th>Action</th><th>Resource</th><th
+              >Result</th
+            ><th>Reason</th></tr
+          ></thead
+        ><tbody id="audit-table"
+          ><tr><td colspan="6" class="empty">Loading audit trail…</td></tr
+          ></tbody
+        >
+      </table>
+    </div>
+  </section></AppLayout
+>

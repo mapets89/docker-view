@@ -1,0 +1,26 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Roles" page="roles" eyebrow="Administration"
+  ><div class="page-actions">
+    <p>Roles grant capabilities; policies constrain resources.</p><button
+      class="primary small"
+      id="new-role">+ New role</button
+    >
+  </div><div class="card-grid" id="roles-grid">
+    <article class="panel empty">Loading roles…</article>
+  </div><dialog id="role-dialog">
+    <button class="dialog-close">×</button><form id="role-form">
+      <p class="kicker">Role</p><h2>Permission set</h2><input
+        type="hidden"
+        name="id"
+      /><label>Name<input name="name" required maxlength="64" /></label><label
+        >Description<textarea name="description" maxlength="500"
+        ></textarea></label
+      ><div id="permission-options"></div><button class="primary" type="submit"
+        >Save role</button
+      ><p class="form-error"></p>
+    </form>
+  </dialog></AppLayout
+>

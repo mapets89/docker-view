@@ -1,0 +1,120 @@
+---
+import "../styles/global.css";
+interface Props {
+  title: string;
+  page: string;
+  eyebrow?: string;
+}
+const { title, page, eyebrow = "Operations" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#090d12" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta
+      name="description"
+      content="DockerView — controlled Docker troubleshooting"
+    />
+    <title>{title} · DockerView</title>
+  </head>
+  <body data-page={page}>
+    <div class="shell">
+      <aside class="sidebar">
+        <a class="brand" href="/app/overview/"
+          ><span class="brand-mark" aria-hidden="true"
+            ><i></i><i></i><i></i></span
+          ><span>Docker<span>View</span></span></a
+        >
+        <div class="instance">
+          <span class="pulse"></span><div>
+            <b id="instance-name">DockerView</b><small id="environment-name"
+              >connecting</small
+            >
+          </div>
+        </div>
+        <nav aria-label="Main navigation">
+          <p>Operations</p>
+          <a href="/app/overview/" data-nav="overview"><span>⌂</span>Overview</a
+          >
+          <a
+            href="/app/containers/"
+            data-nav="containers"
+            data-permission="container.read"><span>▦</span>Containers</a
+          >
+          <a href="/app/logs/" data-nav="logs" data-permission="container.logs"
+            ><span>≡</span>Logs</a
+          >
+          <a
+            href="/app/terminal/"
+            data-nav="terminal"
+            data-permission="container.exec"><span>›_</span>Terminal</a
+          >
+          <p data-admin>Administration</p>
+          <a
+            href="/app/users/"
+            data-admin-link
+            data-nav="users"
+            data-permission="user.read"><span>♙</span>Users</a
+          >
+          <a
+            href="/app/roles/"
+            data-admin-link
+            data-nav="roles"
+            data-permission="role.read"><span>◇</span>Roles</a
+          >
+          <a
+            href="/app/permissions/"
+            data-admin-link
+            data-nav="permissions"
+            data-permission="permission.read"><span>✓</span>Permissions</a
+          >
+          <a
+            href="/app/policies/"
+            data-admin-link
+            data-nav="policies"
+            data-permission="policy.read"><span>⌁</span>Policies</a
+          >
+          <a
+            href="/app/audit/"
+            data-admin-link
+            data-nav="audit"
+            data-permission="audit.read"><span>◷</span>Audit</a
+          >
+          <a
+            href="/app/settings/"
+            data-admin-link
+            data-nav="settings"
+            data-permission="settings.read"><span>⚙</span>Settings</a
+          >
+        </nav>
+        <div class="account">
+          <div class="avatar" id="avatar">?</div><div>
+            <b id="account-name">Loading…</b><small id="account-role"></small>
+          </div><button id="logout" title="Sign out" aria-label="Sign out"
+            >↪</button
+          >
+        </div>
+      </aside>
+      <main>
+        <header class="topbar">
+          <div><p>{eyebrow}</p><h1>{title}</h1></div><div class="top-actions">
+            <span class="connection"><i></i>Docker connected</span><button
+              class="icon-button"
+              id="refresh"
+              aria-label="Refresh">↻</button
+            >
+          </div>
+        </header>
+        <section class="content"><slot /></section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script>
+      import "../scripts/app.ts";
+    </script>
+  </body>
+</html>

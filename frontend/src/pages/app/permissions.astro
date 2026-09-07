@@ -1,0 +1,26 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Permissions" page="permissions" eyebrow="Administration"
+  ><div class="page-actions">
+    <p>
+      Backend-defined capability catalog. Permissions cannot be invented by the
+      UI.
+    </p>
+  </div><section class="panel flush">
+    <div class="table-wrap">
+      <table>
+        <thead
+          ><tr
+            ><th>Permission</th><th>Category</th><th>Description</th><th
+              >Used by</th
+            ></tr
+          ></thead
+        ><tbody id="permissions-table"
+          ><tr><td colspan="4" class="empty">Loading catalog…</td></tr></tbody
+        >
+      </table>
+    </div>
+  </section></AppLayout
+>

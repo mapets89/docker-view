@@ -1,0 +1,99 @@
+---
+import "../styles/global.css";
+---
+
+<!doctype html>
+<html lang="en">
+  <head
+    ><meta charset="UTF-8" /><meta
+      name="viewport"
+      content="width=device-width"
+    /><meta name="theme-color" content="#090d12" /><link
+      rel="icon"
+      href="/favicon.svg"
+      type="image/svg+xml"
+    /><title>
+      DockerView · Sign in
+    </title></head
+  >
+  <body data-page="auth" class="auth-page"
+    ><main class="auth-shell">
+      <section class="auth-intro">
+        <a class="brand"
+          ><span class="brand-mark"><i></i><i></i><i></i></span><span
+            >Docker<span>View</span></span
+          ></a
+        ><div>
+          <p class="kicker">Controlled troubleshooting</p><h1>
+            See the system.<br /><em>Touch only what’s allowed.</em>
+          </h1><p>
+            One focused interface for container state, logs, configuration risk,
+            and audited terminal access.
+          </p>
+        </div><div class="boundary">
+          <span>Security boundary</span><b
+            >Web/API → authenticated Gateway → Docker Engine</b
+          >
+        </div>
+      </section><section class="auth-card">
+        <div id="auth-loading">
+          <span class="spinner"></span><p>Checking instance state…</p>
+        </div><form id="login-form" hidden>
+          <p class="kicker">Welcome back</p><h2>Sign in to DockerView</h2><label
+            >Username<input
+              name="username"
+              autocomplete="username"
+              required
+              minlength="3"
+              maxlength="64"
+              autofocus
+            /></label
+          ><label
+            >Password<input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              maxlength="1024"
+            /></label
+          ><button class="primary" type="submit">Sign in <span>→</span></button
+          ><p class="form-error" role="alert"></p>
+        </form><form id="setup-form" hidden>
+          <p class="kicker">First run</p><h2>Create the administrator</h2><p
+            class="muted"
+          >
+            No default credentials. This setup closes permanently after the
+            first account is created.
+          </p><label
+            >Username<input
+              name="username"
+              autocomplete="username"
+              required
+              pattern="[A-Za-z][A-Za-z0-9_.-]{2,63}"
+            /></label
+          ><label
+            >Password<input
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              required
+              minlength="6"
+              maxlength="1024"
+            /></label
+          ><label
+            >Confirm password<input
+              name="confirm"
+              type="password"
+              autocomplete="new-password"
+              required
+            /></label
+          ><button class="primary" type="submit"
+            >Create secure instance <span>→</span></button
+          ><p class="form-error" role="alert"></p>
+        </form>
+      </section>
+    </main><script>
+      import "../scripts/app.ts";
+    </script></body
+  >
+</html>

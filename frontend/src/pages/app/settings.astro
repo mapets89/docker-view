@@ -1,0 +1,45 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Settings" page="settings" eyebrow="Administration"
+  ><div class="settings-grid">
+    <form class="panel form-panel" id="settings-form">
+      <p class="kicker">Instance</p><h2>Runtime preferences</h2><label
+        >Instance name<input name="instance_name" maxlength="200" /></label
+      ><label
+        >Environment name<input name="environment" maxlength="200" /></label
+      ><label
+        >Terminal idle timeout<input
+          name="terminal_idle_timeout"
+          placeholder="15m"
+        /></label
+      ><label
+        >Default log tail<input
+          name="default_log_tail"
+          type="number"
+          min="1"
+          max="5000"
+        /></label
+      ><label class="check"
+        ><input name="secret_masking" type="checkbox" /> Secret masking enabled</label
+      ><button class="primary" type="submit">Save settings</button><p
+        class="form-error"
+      >
+      </p>
+    </form><article class="panel trust-card">
+      <p class="kicker">Trust boundary</p><h2>Local authentication</h2><dl>
+        <div><dt>Provider</dt><dd>local</dd></div><div>
+          <dt>Sessions</dt><dd>Server-side / SQLite</dd>
+        </div><div>
+          <dt>Gateway</dt><dd>Shared-secret authenticated</dd>
+        </div><div><dt>Docker socket</dt><dd>Gateway only</dd></div>
+      </dl><div class="callout critical">
+        <b>Host-level capability</b><p>
+          A compromised Docker Gateway means the Docker host must be considered
+          potentially compromised.
+        </p>
+      </div>
+    </article>
+  </div></AppLayout
+>

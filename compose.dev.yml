@@ -1,0 +1,5 @@
+services:
+  dockerview:
+    environment:
+      DOCKERVIEW_COOKIE_SECURE: "false"
+      DOCKERVIEW_ALLOWED_ORIGINS: http://localhost:8080

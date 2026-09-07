@@ -1,0 +1,31 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Logs" page="logs"
+  ><div class="toolbar">
+    <select id="log-container"
+      ><option value="">Select a container…</option></select
+    ><select id="log-tail"
+      ><option value="100">Last 100</option><option value="500" selected
+        >Last 500</option
+      ><option value="1000">Last 1,000</option><option value="5000"
+        >Last 5,000</option
+      ></select
+    ><button class="secondary" id="log-live">Follow live</button><button
+      class="secondary"
+      id="log-pause"
+      disabled>Pause</button
+    ><label class="search compact"
+      ><input id="log-search" placeholder="Find in output" /></label
+    >
+  </div><section class="terminal-panel">
+    <div class="terminal-chrome">
+      <span></span><span></span><span></span><b id="log-state"
+        >Choose a container</b
+      ><button id="copy-logs">Copy</button>
+    </div><pre
+      id="log-output"
+      tabindex="0">Select a running or stopped container to inspect its logs.</pre>
+  </section></AppLayout
+>

@@ -1,0 +1,74 @@
+name: dockerview
+services:
+  dockerview-secret-init:
+    build: {context: ., dockerfile: docker/Dockerfile.secret-init}
+    image: dockerview/secret-init:0.1.0
+    command: ["/bin/sh", "-c", "umask 077; if [ ! -s /secrets/gateway ]; then head -c 48 /dev/urandom | base64 > /secrets/gateway; fi; chmod 0444 /secrets/gateway"]
+    volumes: [dockerview-secrets:/secrets]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: "no"
+    network_mode: none
+  dockerview:
+    build: {context: ., dockerfile: docker/Dockerfile}
+    image: dockerview/server:0.1.0
+    depends_on:
+      dockerview-secret-init: {condition: service_completed_successfully}
+      dockerview-gateway: {condition: service_healthy}
+    environment:
+      DOCKERVIEW_INSTANCE_NAME: ${DOCKERVIEW_INSTANCE_NAME:-DockerView}
+      DOCKERVIEW_ENVIRONMENT: ${DOCKERVIEW_ENVIRONMENT:-DEV}
+      DOCKERVIEW_LISTEN_ADDR: :8080
+      DOCKERVIEW_DB_PATH: /data/dockerview.db
+      DOCKERVIEW_STATIC_DIR: /app/web
+      DOCKERVIEW_SESSION_TTL: ${DOCKERVIEW_SESSION_TTL:-12h}
+      DOCKERVIEW_TERMINAL_IDLE_TIMEOUT: ${DOCKERVIEW_TERMINAL_IDLE_TIMEOUT:-15m}
+      DOCKERVIEW_LOG_TAIL_DEFAULT: ${DOCKERVIEW_LOG_TAIL_DEFAULT:-500}
+      DOCKERVIEW_GATEWAY_URL: http://dockerview-gateway:8081
+      DOCKERVIEW_GATEWAY_SECRET_FILE: /run/dockerview-secrets/gateway
+      DOCKERVIEW_COOKIE_SECURE: ${DOCKERVIEW_COOKIE_SECURE:-false}
+      DOCKERVIEW_SECRET_MASKING: ${DOCKERVIEW_SECRET_MASKING:-true}
+      DOCKERVIEW_ALLOWED_ORIGINS: ${DOCKERVIEW_ALLOWED_ORIGINS:-http://localhost:8080}
+    ports: ["${DOCKERVIEW_PORT:-8080}:8080"]
+    volumes: [dockerview-data:/data, dockerview-secrets:/run/dockerview-secrets:ro]
+    networks: [dockerview-public, dockerview-internal]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    labels: {dockerview.system: "true"}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/health]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+  dockerview-gateway:
+    build: {context: ., dockerfile: docker/Dockerfile.gateway}
+    image: dockerview/gateway:0.1.0
+    depends_on:
+      dockerview-secret-init: {condition: service_completed_successfully}
+    environment:
+      DOCKERVIEW_GATEWAY_LISTEN_ADDR: :8081
+      DOCKERVIEW_GATEWAY_SECRET_FILE: /run/dockerview-secrets/gateway
+    volumes: [/var/run/docker.sock:/var/run/docker.sock, dockerview-secrets:/run/dockerview-secrets:ro]
+    group_add: ["${DOCKER_GID:-0}"]
+    networks: [dockerview-internal]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    labels: {dockerview.system: "true"}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8081/ready]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+volumes:
+  dockerview-data:
+  dockerview-secrets:
+networks:
+  dockerview-public:
+  dockerview-internal: {internal: true}

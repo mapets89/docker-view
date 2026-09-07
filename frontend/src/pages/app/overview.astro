@@ -1,0 +1,53 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Overview" page="overview"
+  ><div class="hero-line">
+    <div>
+      <span class="live-dot"></span><span>Local engine</span><b
+        id="overview-time">Live</b
+      >
+    </div><button class="secondary" data-action="refresh">Refresh data</button>
+  </div><div class="metric-grid" id="overview-metrics">
+    <article>
+      <span>Running</span><strong>—</strong><small>containers</small>
+    </article><article>
+      <span>Stopped</span><strong>—</strong><small>containers</small>
+    </article><article>
+      <span>Unhealthy</span><strong>—</strong><small>containers</small>
+    </article><article>
+      <span>Gateway</span><strong class="word">Checking</strong><small
+        >private boundary</small
+      >
+    </article><article>
+      <span>Host CPU</span><strong>—</strong><small>logical CPUs</small>
+    </article><article>
+      <span>Host RAM</span><strong>—</strong><small>Engine-reported</small>
+    </article><article>
+      <span>Disk</span><strong class="word">Not exposed</strong><small
+        >no host filesystem mount</small
+      >
+    </article>
+  </div><section class="panel">
+    <div class="panel-head">
+      <div><p class="kicker">Runtime inventory</p><h2>Containers</h2></div><a
+        class="text-link"
+        href="/app/containers/">View all →</a
+      >
+    </div><div class="table-wrap">
+      <table>
+        <thead
+          ><tr
+            ><th>Name</th><th>Status</th><th>Image</th><th>Ports</th><th
+              >System</th
+            ></tr
+          ></thead
+        ><tbody id="overview-containers"
+          ><tr><td colspan="5" class="empty">Loading containers…</td></tr
+          ></tbody
+        >
+      </table>
+    </div>
+  </section></AppLayout
+>

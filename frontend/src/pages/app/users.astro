@@ -1,0 +1,55 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Users" page="users" eyebrow="Administration"
+  ><div class="page-actions">
+    <p>Local accounts and scoped role bindings.</p><button
+      class="primary small"
+      id="new-user">+ New user</button
+    >
+  </div><section class="panel flush">
+    <div class="table-wrap">
+      <table>
+        <thead
+          ><tr
+            ><th>User</th><th>Status</th><th>Roles</th><th>Created</th><th
+              >Last login</th
+            ><th></th></tr
+          ></thead
+        ><tbody id="users-table"
+          ><tr><td colspan="6" class="empty">Loading users…</td></tr></tbody
+        >
+      </table>
+    </div>
+  </section><dialog id="user-dialog">
+    <button class="dialog-close">×</button><form id="user-form">
+      <p class="kicker">Account</p><h2 id="user-form-title">
+        Create user
+      </h2><input type="hidden" name="id" /><label
+        >Username<input
+          name="username"
+          required
+          pattern="[A-Za-z][A-Za-z0-9_.-]{2,63}"
+        /></label
+      ><label
+        >Password<input
+          name="password"
+          type="password"
+          minlength="6"
+          maxlength="1024"
+        /><small
+          >Minimum 6 characters. Leave blank when editing to keep it.</small
+        ></label
+      ><fieldset>
+        <legend>Roles</legend><div id="user-role-options" class="checks"></div>
+      </fieldset><label class="check"
+        ><input name="enabled" type="checkbox" checked /> Account enabled</label
+      ><button class="primary" type="submit">Save user</button><p
+        class="form-error"
+        role="alert"
+      >
+      </p>
+    </form>
+  </dialog></AppLayout
+>
