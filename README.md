@@ -43,7 +43,7 @@ See [architecture](docs/architecture.md), [security model](docs/security.md), [t
 ## Quick start
 
 ```bash
-git clone <repository-url> dockerview
+git clone https://github.com/mapets89/docker-view.git dockerview
 cd dockerview
 cp .env.example .env
 docker compose up -d --build
