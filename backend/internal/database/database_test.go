@@ -107,3 +107,26 @@ func TestAuditRoundTrip(t *testing.T) {
 		t.Fatalf("unexpected metadata: got %s, want %s", events[0].Metadata, want)
 	}
 }
+
+func TestEmptyAdministrativeCollectionsAreNotNil(t *testing.T) {
+	s, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s.Close() }()
+	ctx := context.Background()
+	policies, err := s.ListPolicies(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policies == nil {
+		t.Fatal("empty policies must serialize as [] instead of null")
+	}
+	events, err := s.ListAudit(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if events == nil {
+		t.Fatal("empty audit events must serialize as [] instead of null")
+	}
+}

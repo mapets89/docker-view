@@ -874,7 +874,7 @@ function ruleMarkup(rule?: Rule): string {
   return `<div class="rule-row"><select name="effect"><option value="allow" ${rule?.Effect === "allow" ? "selected" : ""}>Allow</option><option value="deny" ${rule?.Effect === "deny" ? "selected" : ""}>Deny</option></select><select name="match_type"><option value="name" ${rule?.MatchType !== "label" ? "selected" : ""}>Container name</option><option value="label" ${rule?.MatchType === "label" ? "selected" : ""}>Container label</option></select><input name="match" value="${esc(rule?.MatchType === "label" ? `${rule.MatchKey}=${rule.MatchValue}` : (rule?.MatchValue ?? ""))}" placeholder="api-* or key=value" maxlength="128"/><button type="button" class="remove-rule">×</button></div>`;
 }
 async function policiesPage() {
-  const policies = await api<Policy[]>("/policies"),
+  const policies = (await api<Policy[] | null>("/policies")) ?? [],
     grid = $("#policies-grid"),
     dialog = $<HTMLDialogElement>("#policy-dialog"),
     form = $<HTMLFormElement>("#policy-form"),
@@ -972,7 +972,7 @@ async function policiesPage() {
   });
 }
 async function auditPage() {
-  const list = await api<Audit[]>("/audit?limit=500"),
+  const list = (await api<Audit[] | null>("/audit?limit=500")) ?? [],
     body = $("#audit-table"),
     search = $<HTMLInputElement>("#audit-search"),
     result = $<HTMLSelectElement>("#audit-result");

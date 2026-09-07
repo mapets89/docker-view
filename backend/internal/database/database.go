@@ -293,7 +293,7 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 	if err = rows.Close(); err != nil {
 		return nil, err
 	}
-	var out []User
+	out := make([]User, 0)
 	for _, id := range ids {
 		u, e := s.GetUser(ctx, id)
 		if e != nil {
@@ -387,7 +387,7 @@ func (s *Store) ListRoles(ctx context.Context) ([]Role, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out []Role
+	out := make([]Role, 0)
 	for rows.Next() {
 		var r Role
 		if err = rows.Scan(&r.ID, &r.Name, &r.Description, &r.Builtin); err != nil {
@@ -479,7 +479,7 @@ func (s *Store) ListPermissions(ctx context.Context) ([]Permission, error) {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	var out []Permission
+	out := make([]Permission, 0)
 	for rows.Next() {
 		var p Permission
 		var roles string
@@ -499,7 +499,7 @@ func (s *Store) ListPolicies(ctx context.Context) ([]Policy, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out []Policy
+	out := make([]Policy, 0)
 	for rows.Next() {
 		var p Policy
 		if err = rows.Scan(&p.ID, &p.Name, &p.Description, &p.Enabled); err != nil {
@@ -655,7 +655,7 @@ func (s *Store) ListAudit(ctx context.Context, limit int) ([]AuditEvent, error) 
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	var out []AuditEvent
+	out := make([]AuditEvent, 0)
 	for rows.Next() {
 		var e AuditEvent
 		var metadata string
