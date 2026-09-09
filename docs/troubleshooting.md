@@ -27,3 +27,7 @@ If the UI reports `Unable to list audit events`, rebuild from the current source
 ## Policies reports `Cannot read properties of null`
 
 This indicates an older build returned `null` for an empty policy collection. Current builds return an empty JSON array and defensively accept the legacy response. Rebuild the services and hard-refresh the page; no seed policy is required.
+
+## Logout shows administrator setup again
+
+The public setup status and login HTML must not be cached. Current builds send `Cache-Control: no-store`, replace the authenticated history entry during logout, and refresh pages restored from the browser back-forward cache. The bootstrap endpoint also remains atomically closed while any user exists, so the stale form cannot create a second initial administrator.

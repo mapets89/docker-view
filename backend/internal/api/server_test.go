@@ -43,6 +43,47 @@ func TestMutableRouteRequiresCSRF(t *testing.T) {
 	}
 }
 
+func TestLogoutKeepsBootstrapClosedAndAuthResponsesUncached(t *testing.T) {
+	store, err := database.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	u, err := store.BootstrapAdmin(context.Background(), "admin", "correct horse battery staple")
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, csrf, err := store.CreateSession(context.Background(), u.ID, "", "", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewaySecret: "01234567890123456789012345678901", MaxBodyBytes: 1 << 20, SessionTTL: time.Hour, AllowedOrigins: []string{"http://localhost"}}
+	handler := New(cfg, store).Router()
+
+	logout := httptest.NewRequest(http.MethodPost, "http://localhost/api/v1/auth/logout", nil)
+	logout.AddCookie(&http.Cookie{Name: sessionCookie, Value: token})
+	logout.Header.Set("X-CSRF-Token", csrf)
+	logout.Header.Set("Origin", "http://localhost")
+	logoutResponse := httptest.NewRecorder()
+	handler.ServeHTTP(logoutResponse, logout)
+	if logoutResponse.Code != http.StatusNoContent {
+		t.Fatalf("logout returned %d: %s", logoutResponse.Code, logoutResponse.Body.String())
+	}
+
+	status := httptest.NewRequest(http.MethodGet, "http://localhost/api/v1/status", nil)
+	statusResponse := httptest.NewRecorder()
+	handler.ServeHTTP(statusResponse, status)
+	if statusResponse.Code != http.StatusOK {
+		t.Fatalf("status returned %d: %s", statusResponse.Code, statusResponse.Body.String())
+	}
+	if !strings.Contains(statusResponse.Body.String(), `"needs_setup":false`) {
+		t.Fatalf("logout reopened bootstrap: %s", statusResponse.Body.String())
+	}
+	if got := statusResponse.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("status Cache-Control = %q, want no-store", got)
+	}
+}
+
 func TestSecretPermissionStillMasksWhenGlobalMaskingDisabled(t *testing.T) {
 	transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		if r.Header.Get("X-DockerView-Gateway-Secret") == "" {

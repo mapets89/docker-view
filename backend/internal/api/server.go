@@ -55,6 +55,7 @@ func (s *Server) Router() http.Handler {
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
 	r.Get("/ready", s.ready)
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(noStore)
 		r.Get("/status", s.status)
 		r.Post("/bootstrap", s.bootstrap)
 		r.Post("/auth/login", s.login)
@@ -136,7 +137,17 @@ func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(name); err != nil {
 		name = filepath.Join(s.Cfg.StaticDir, "index.html")
 	}
+	if filepath.Ext(name) == ".html" {
+		w.Header().Set("Cache-Control", "no-store")
+	}
 	http.ServeFile(w, r, name)
+}
+
+func noStore(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
 }
 func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
 	if err := s.Store.DB.PingContext(r.Context()); err != nil {

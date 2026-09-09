@@ -192,8 +192,12 @@ function jsonObject(v: unknown): Record<string, unknown> {
 async function initAuth() {
   const loading = $("#auth-loading");
   try {
-    const status = await api<{ needs_setup: boolean }>("/status");
+    const status = await api<{ needs_setup: boolean }>("/status", {
+      cache: "no-store",
+    });
     loading?.setAttribute("hidden", "");
+    $("#login-form")?.setAttribute("hidden", "");
+    $("#setup-form")?.setAttribute("hidden", "");
     const form = $<HTMLFormElement>(
       status.needs_setup ? "#setup-form" : "#login-form",
     );
@@ -214,7 +218,7 @@ async function initAuth() {
           method: "POST",
           body: JSON.stringify(data),
         });
-        location.href = "/app/overview/";
+        location.replace("/app/overview/");
       } catch (err) {
         showError(form, err);
       }
@@ -251,7 +255,7 @@ async function initShell() {
     if (e) e.textContent = status.environment;
     $("#logout")?.addEventListener("click", async () => {
       await api("/auth/logout", { method: "POST" });
-      location.href = "/";
+      location.replace("/");
     });
     $("#refresh")?.addEventListener("click", () => location.reload());
     $$<HTMLElement>("[data-action=refresh]").forEach((el) =>
@@ -1059,5 +1063,8 @@ async function route() {
       break;
   }
 }
+window.addEventListener("pageshow", (event) => {
+  if (page === "auth" && event.persisted) location.reload();
+});
 if (page === "auth") void initAuth();
 else void initShell();
