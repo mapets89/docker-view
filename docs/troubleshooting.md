@@ -33,3 +33,7 @@ This indicates an older build returned `null` for an empty policy collection. Cu
 If the login and administrator setup forms appear at the same time, the page layout CSS is overriding the browser's default styling for the HTML `hidden` attribute. Current builds explicitly enforce `[hidden] { display: none !important; }`. They also send `Cache-Control: no-store`, replace the authenticated history entry during logout, and refresh pages restored from the browser back-forward cache.
 
 The Server remains authoritative: `/api/v1/status` only reports `needs_setup: true` when the user table is empty, and the bootstrap transaction refuses to create another initial administrator while any user exists.
+
+## A page appears without styles after an update
+
+Static frontend assets include content hashes in their filenames. A browser tab opened before a container rebuild may still request the previous hash. Current builds resolve that stale filename to the matching current asset and revalidate frontend assets, while genuinely unknown files return `404` instead of the login HTML.

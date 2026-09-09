@@ -135,12 +135,51 @@ func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 		name = filepath.Join(name, "index.html")
 	}
 	if _, err := os.Stat(name); err != nil {
-		name = filepath.Join(s.Cfg.StaticDir, "index.html")
+		if replacement, ok := resolveHashedAsset(s.Cfg.StaticDir, clean); ok {
+			name = replacement
+		} else if filepath.Ext(clean) != "" {
+			http.NotFound(w, r)
+			return
+		} else {
+			name = filepath.Join(s.Cfg.StaticDir, "index.html")
+		}
 	}
 	if filepath.Ext(name) == ".html" {
 		w.Header().Set("Cache-Control", "no-store")
+	} else if strings.HasPrefix(clean, "/_astro/") {
+		w.Header().Set("Cache-Control", "no-cache")
 	}
 	http.ServeFile(w, r, name)
+}
+
+func resolveHashedAsset(staticDir, requested string) (string, bool) {
+	if !strings.HasPrefix(requested, "/_astro/") {
+		return "", false
+	}
+	base := filepath.Base(requested)
+	ext := filepath.Ext(base)
+	stem := strings.TrimSuffix(base, ext)
+	dot := strings.LastIndex(stem, ".")
+	if dot < 1 || ext == "" {
+		return "", false
+	}
+	prefix := stem[:dot] + "."
+	entries, err := os.ReadDir(filepath.Join(staticDir, "_astro"))
+	if err != nil {
+		return "", false
+	}
+	var match string
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasPrefix(name, prefix) || filepath.Ext(name) != ext {
+			continue
+		}
+		if match != "" {
+			return "", false
+		}
+		match = filepath.Join(staticDir, "_astro", name)
+	}
+	return match, match != ""
 }
 
 func noStore(next http.Handler) http.Handler {

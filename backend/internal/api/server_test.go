@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -81,6 +83,42 @@ func TestLogoutKeepsBootstrapClosedAndAuthResponsesUncached(t *testing.T) {
 	}
 	if got := statusResponse.Header().Get("Cache-Control"); got != "no-store" {
 		t.Fatalf("status Cache-Control = %q, want no-store", got)
+	}
+}
+
+func TestStaticReplacesStaleHashedAssetAndRejectsUnknownAssets(t *testing.T) {
+	staticDir := t.TempDir()
+	assetDir := filepath.Join(staticDir, "_astro")
+	if err := os.Mkdir(assetDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("login"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const css = "body{color:teal}"
+	if err := os.WriteFile(filepath.Join(assetDir, "global.CURRENT.css"), []byte(css), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	server := &Server{Cfg: config.Config{StaticDir: staticDir}}
+
+	stale := httptest.NewRequest(http.MethodGet, "http://localhost/_astro/global.OLD.css", nil)
+	staleResponse := httptest.NewRecorder()
+	server.static(staleResponse, stale)
+	if staleResponse.Code != http.StatusOK || staleResponse.Body.String() != css {
+		t.Fatalf("stale asset returned %d %q", staleResponse.Code, staleResponse.Body.String())
+	}
+	if got := staleResponse.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/css") {
+		t.Fatalf("stale CSS Content-Type = %q", got)
+	}
+	if got := staleResponse.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Fatalf("stale asset Cache-Control = %q, want no-cache", got)
+	}
+
+	missing := httptest.NewRequest(http.MethodGet, "http://localhost/_astro/unknown.OLD.js", nil)
+	missingResponse := httptest.NewRecorder()
+	server.static(missingResponse, missing)
+	if missingResponse.Code != http.StatusNotFound {
+		t.Fatalf("unknown asset returned %d, want 404", missingResponse.Code)
 	}
 }
 
