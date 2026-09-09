@@ -8,6 +8,10 @@ All notable changes are documented here. This project follows Keep a Changelog c
 
 - Initial DockerView V1 implementation: split Server/Gateway architecture, local auth, sessions, RBAC, policies, audit, inspection, stats, risk analysis, masked environment and inspect, SSE logs, xterm terminal, admin UI, hardened Compose, CI, tests, and security documentation.
 
+### Changed
+
+- Redesigned the container inventories with responsive table and card layouts, and added sorting by container, status, resources, and risk to both Overview and Containers.
+
 ### Fixed
 
 - Prevented Users, Roles, and Policies listings from deadlocking when SQLite uses a single connection.

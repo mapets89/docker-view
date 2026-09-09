@@ -13,19 +13,40 @@ import AppLayout from "../../layouts/AppLayout.astro";
       ><option value="">All states</option><option>running</option><option
         >exited</option
       ><option>paused</option></select
-    ><span class="count" id="container-count">— containers</span>
-  </div><section class="panel flush">
+    ><div class="sort-control">
+      <span>Sort by</span><div class="sort-field">
+        <select id="container-sort"
+          ><option value="name">Container</option><option value="status"
+            >Status</option
+          ><option value="resources">Resources</option><option value="risk"
+            >Risk</option
+          ></select
+        ><button
+          class="sort-direction"
+          id="container-sort-direction"
+          type="button"
+          title="Ascending"
+          aria-label="Sort ascending">↑</button>
+      </div>
+    </div><span class="count" id="container-count">— containers</span>
+  </div><section class="panel flush containers-panel">
     <div class="table-wrap">
-      <table>
+      <table class="containers-table">
+        <colgroup>
+          <col class="container-col" /><col class="status-col" /><col
+            class="usage-col"
+          /><col class="ports-col" /><col class="risk-col" /><col
+            class="actions-col"
+          />
+        </colgroup>
         <thead
           ><tr
-            ><th data-sort="name">Name</th><th>Status</th><th>Health</th><th
-              >Image</th
-            ><th>CPU</th><th>RAM</th><th>Uptime</th><th>Ports</th><th>Risk</th
-            ><th></th></tr
+            ><th data-sort="name">Container</th><th>Status</th><th>Resources</th
+            ><th>Published ports</th><th>Risk</th><th>Actions</th></tr
           ></thead
         ><tbody id="containers-table"
-          ><tr><td colspan="10" class="empty">Loading inventory…</td></tr
+          ><tr class="empty-row"
+            ><td colspan="6" class="empty">Loading inventory…</td></tr
           ></tbody
         >
       </table>

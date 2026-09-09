@@ -69,6 +69,11 @@ type Audit = {
   Result: string;
   Reason: string;
 };
+type ContainerTelemetry = {
+  cpu?: number;
+  memory?: number;
+  risk?: string;
+};
 
 const $ = <T extends Element>(
   selector: string,
@@ -151,6 +156,53 @@ function nameOf(c: Container): string {
 }
 function idOf(c: Container): string {
   return c.ID ?? c.Id ?? nameOf(c);
+}
+function riskLevel(
+  container: Container,
+  telemetry?: ContainerTelemetry,
+): string | undefined {
+  return container.Labels?.["dockerview.system"] === "true"
+    ? "critical"
+    : telemetry?.risk;
+}
+function compareContainers(
+  a: Container,
+  b: Container,
+  key: string,
+  ascending: boolean,
+  telemetry: Map<string, ContainerTelemetry>,
+): number {
+  const aMetric = telemetry.get(idOf(a)),
+    bMetric = telemetry.get(idOf(b));
+  const optionalNumber = (left?: number, right?: number): number => {
+    if (left == null && right == null) return 0;
+    if (left == null) return 1;
+    if (right == null) return -1;
+    return ascending ? left - right : right - left;
+  };
+  let result: number;
+  if (key === "status") {
+    result = (a.State ?? "").localeCompare(b.State ?? "");
+    if (!ascending) result *= -1;
+  } else if (key === "resources") {
+    result = optionalNumber(aMetric?.cpu, bMetric?.cpu);
+    if (result === 0) result = optionalNumber(aMetric?.memory, bMetric?.memory);
+  } else if (key === "risk") {
+    const ranks: Record<string, number> = {
+      low: 1,
+      medium: 2,
+      high: 3,
+      critical: 4,
+    };
+    result = optionalNumber(
+      ranks[riskLevel(a, aMetric)?.toLowerCase() ?? ""],
+      ranks[riskLevel(b, bMetric)?.toLowerCase() ?? ""],
+    );
+  } else {
+    result = nameOf(a).localeCompare(nameOf(b));
+    if (!ascending) result *= -1;
+  }
+  return result || nameOf(a).localeCompare(nameOf(b));
 }
 function has(permission: string): boolean {
   return currentUser?.Permissions?.includes(permission) ?? false;
@@ -303,34 +355,94 @@ async function overview() {
   ].forEach((v, i) => {
     if (cards[i]) cards[i].textContent = String(v);
   });
-  const body = $("#overview-containers");
-  if (body)
-    body.innerHTML =
-      containers
-        .slice(0, 8)
-        .map(
-          (c) =>
-            `<tr><td class="name-cell">${esc(nameOf(c))}<small>${esc(idOf(c).slice(0, 12))}</small></td><td><span class="badge ${c.State === "running" ? "" : "stopped"}">${esc(c.State)}</span></td><td>${esc(c.Image)}</td><td>${esc(ports(c))}</td><td>${c.Labels?.["dockerview.system"] === "true" ? '<span class="badge system">Protected</span>' : "—"}</td></tr>`,
-        )
-        .join("") ||
-      '<tr><td colspan="5" class="empty">No containers found</td></tr>';
+  const body = $("#overview-containers"),
+    sort = $<HTMLSelectElement>("#overview-sort"),
+    direction = $<HTMLButtonElement>("#overview-sort-direction"),
+    telemetry = new Map<string, ContainerTelemetry>();
+  let ascending = true;
+  const render = () => {
+    const list = [...containers]
+      .sort((a, b) =>
+        compareContainers(a, b, sort?.value ?? "name", ascending, telemetry),
+      )
+      .slice(0, 8);
+    if (body)
+      body.innerHTML =
+        list
+          .map((c) => {
+            const id = esc(idOf(c)),
+              metric = telemetry.get(idOf(c)),
+              risk = riskLevel(c, metric);
+            return `<tr>
+              <td class="name-cell">${esc(nameOf(c))}<small>${esc(idOf(c).slice(0, 12))}</small><span class="overview-image">${esc(c.Image)}</span></td>
+              <td data-label="Status"><span class="badge ${c.State === "running" ? "" : "stopped"}">${esc(c.State)}</span></td>
+              <td data-label="Resources"><div class="usage-cell compact"><span><small>CPU</small><b data-cpu="${id}">${metric?.cpu == null ? "—" : `${metric.cpu.toFixed(1)}%`}</b></span><span><small>RAM</small><b data-memory="${id}">${metric?.memory == null ? "—" : formatBytes(metric.memory)}</b></span></div></td>
+              <td data-label="Published ports"><div class="ports-cell">${esc(ports(c))}</div></td>
+              <td data-label="Risk" data-risk="${id}">${risk ? `<span class="badge ${esc(risk.toLowerCase())}">${esc(risk)}</span>` : '<span class="badge">Loading…</span>'}</td>
+            </tr>`;
+          })
+          .join("") ||
+        '<tr><td colspan="5" class="empty">No containers found</td></tr>';
+  };
+  sort?.addEventListener("change", render);
+  direction?.addEventListener("click", () => {
+    ascending = !ascending;
+    direction.textContent = ascending ? "↑" : "↓";
+    direction.title = ascending ? "Ascending" : "Descending";
+    direction.setAttribute(
+      "aria-label",
+      ascending ? "Sort ascending" : "Sort descending",
+    );
+    render();
+  });
+  render();
+  containers
+    .filter((c) => c.State === "running")
+    .slice(0, 25)
+    .forEach((c) => {
+      const id = idOf(c);
+      void loadStatsRow(id, (cpu, memory) => {
+        telemetry.set(id, { ...telemetry.get(id), cpu, memory });
+        if (sort?.value === "resources") render();
+      });
+    });
+  if (has("container.inspect"))
+    containers
+      .filter((c) => c.Labels?.["dockerview.system"] !== "true")
+      .slice(0, 25)
+      .forEach((c) => {
+        const id = idOf(c);
+        void loadRiskRow(id, (risk) => {
+          telemetry.set(id, { ...telemetry.get(id), risk });
+          if (sort?.value === "risk") render();
+        });
+      });
 }
 async function containersPage() {
   await loadContainers();
   const body = $("#containers-table"),
     search = $<HTMLInputElement>("#container-search"),
     filter = $<HTMLSelectElement>("#status-filter"),
+    sort = $<HTMLSelectElement>("#container-sort"),
+    direction = $<HTMLButtonElement>("#container-sort-direction"),
     count = $("#container-count");
+  const telemetry = new Map<string, ContainerTelemetry>(),
+    statsRequested = new Set<string>(),
+    riskRequested = new Set<string>();
+  let ascending = true;
   const render = () => {
     const q = search?.value.toLowerCase() ?? "",
       state = filter?.value ?? "";
-    const list = containers.filter(
-      (c) =>
-        (!q ||
-          nameOf(c).toLowerCase().includes(q) ||
-          (c.Image ?? "").toLowerCase().includes(q)) &&
-        (!state || c.State === state),
-    );
+    const sortKey = sort?.value ?? "name",
+      list = containers
+        .filter(
+          (c) =>
+            (!q ||
+              nameOf(c).toLowerCase().includes(q) ||
+              (c.Image ?? "").toLowerCase().includes(q)) &&
+            (!state || c.State === state),
+        )
+        .sort((a, b) => compareContainers(a, b, sortKey, ascending, telemetry));
     if (count)
       count.textContent = `${list.length} container${list.length === 1 ? "" : "s"}`;
     if (body)
@@ -338,7 +450,10 @@ async function containersPage() {
         list
           .map((c) => {
             const system = c.Labels?.["dockerview.system"] === "true";
-            const id = esc(idOf(c));
+            const rawID = idOf(c),
+              id = esc(rawID),
+              metric = telemetry.get(rawID),
+              risk = riskLevel(c, metric);
             const actions = [
               has("container.inspect")
                 ? `<button class="secondary small inspect" data-id="${id}">Inspect</button>`
@@ -355,10 +470,34 @@ async function containersPage() {
             ]
               .filter(Boolean)
               .join(" ");
-            return `<tr><td class="name-cell">${esc(nameOf(c))}<small>${esc(idOf(c).slice(0, 12))}</small></td><td><span class="badge ${c.State === "running" ? "" : "stopped"}">${esc(c.State)}</span></td><td>${esc(c.Health?.Status ?? "—")}</td><td>${esc(c.Image)}</td><td data-cpu="${id}">—</td><td data-memory="${id}">—</td><td>${esc(uptime(c))}</td><td>${esc(ports(c))}</td><td data-risk="${id}">${system ? '<span class="badge critical">Critical</span>' : '<span class="badge">Loading…</span>'}</td><td>${actions || "—"}</td></tr>`;
+            return `<tr>
+              <td class="name-cell">
+                <strong>${esc(nameOf(c))}</strong>
+                <span class="container-id">${esc(idOf(c).slice(0, 12))}</span>
+                <span class="container-image" title="${esc(c.Image)}">${esc(c.Image)}</span>
+              </td>
+              <td data-label="Status">
+                <div class="state-cell">
+                  <span class="badge ${c.State === "running" ? "" : "stopped"}">${esc(c.State)}</span>
+                  <span class="health-state">${esc(c.Health?.Status ?? "No health check")}</span>
+                  <span class="uptime-value"><small>Uptime</small><b>${esc(uptime(c))}</b></span>
+                </div>
+              </td>
+              <td data-label="Resources">
+                <div class="usage-cell">
+                  <span><small>CPU</small><b data-cpu="${id}">${metric?.cpu == null ? "—" : `${metric.cpu.toFixed(1)}%`}</b></span>
+                  <span><small>RAM</small><b data-memory="${id}">${metric?.memory == null ? "—" : formatBytes(metric.memory)}</b></span>
+                </div>
+              </td>
+              <td data-label="Published ports">
+                <div class="ports-cell">${esc(ports(c))}</div>
+              </td>
+              <td data-label="Risk" data-risk="${id}">${risk ? `<span class="badge ${esc(risk.toLowerCase())}">${esc(risk)}</span>` : '<span class="badge">Loading…</span>'}</td>
+              <td class="actions-cell" data-label="Actions"><div class="row-actions">${actions || "—"}</div></td>
+            </tr>`;
           })
           .join("") ||
-        '<tr><td colspan="10" class="empty">No matching containers</td></tr>';
+        '<tr class="empty-row"><td colspan="6" class="empty">No matching containers</td></tr>';
     $$<HTMLButtonElement>(".inspect", body ?? document).forEach((b) =>
       b.addEventListener("click", () => showContainer(b.dataset.id ?? "")),
     );
@@ -380,22 +519,49 @@ async function containersPage() {
     list
       .filter((c) => c.State === "running")
       .slice(0, 25)
-      .forEach((c) => loadStatsRow(idOf(c)));
+      .forEach((c) => {
+        const id = idOf(c);
+        if (statsRequested.has(id)) return;
+        statsRequested.add(id);
+        void loadStatsRow(id, (cpu, memory) => {
+          telemetry.set(id, { ...telemetry.get(id), cpu, memory });
+          if (sort?.value === "resources") render();
+        });
+      });
     if (has("container.inspect"))
       list
         .filter((c) => c.Labels?.["dockerview.system"] !== "true")
         .slice(0, 25)
-        .forEach((c) => loadRiskRow(idOf(c)));
+        .forEach((c) => {
+          const id = idOf(c);
+          if (riskRequested.has(id)) return;
+          riskRequested.add(id);
+          void loadRiskRow(id, (risk) => {
+            telemetry.set(id, { ...telemetry.get(id), risk });
+            if (sort?.value === "risk") render();
+          });
+        });
   };
   search?.addEventListener("input", render);
   filter?.addEventListener("change", render);
+  sort?.addEventListener("change", render);
+  direction?.addEventListener("click", () => {
+    ascending = !ascending;
+    direction.textContent = ascending ? "↑" : "↓";
+    direction.title = ascending ? "Ascending" : "Descending";
+    direction.setAttribute(
+      "aria-label",
+      ascending ? "Sort ascending" : "Sort descending",
+    );
+    render();
+  });
   render();
   const dialog = $<HTMLDialogElement>("#container-detail");
   $(".dialog-close", dialog ?? document)?.addEventListener("click", () =>
     dialog?.close(),
   );
 }
-async function loadRiskRow(id: string) {
+async function loadRiskRow(id: string, loaded?: (risk: string) => void) {
   try {
     const result = await api<{ risk: { level: string } }>(
       `/containers/${encodeURIComponent(id)}/`,
@@ -403,11 +569,15 @@ async function loadRiskRow(id: string) {
     const el = $<HTMLElement>(`[data-risk="${CSS.escape(id)}"]`);
     if (el)
       el.innerHTML = `<span class="badge ${esc(result.risk.level.toLowerCase())}">${esc(result.risk.level)}</span>`;
+    loaded?.(result.risk.level);
   } catch {
     /* risk enrichment is best effort */
   }
 }
-async function loadStatsRow(id: string) {
+async function loadStatsRow(
+  id: string,
+  loaded?: (cpu: number, memory: number) => void,
+) {
   try {
     const s = jsonObject(
       await api(`/containers/${encodeURIComponent(id)}/stats`),
@@ -431,6 +601,7 @@ async function loadStatsRow(id: string) {
       memEl = $<HTMLElement>(`[data-memory="${CSS.escape(id)}"]`);
     if (cpuEl) cpuEl.textContent = `${pct.toFixed(1)}%`;
     if (memEl) memEl.textContent = formatBytes(used);
+    loaded?.(pct, used);
   } catch {
     /* individual stats are best effort */
   }

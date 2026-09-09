@@ -31,17 +31,33 @@ import AppLayout from "../../layouts/AppLayout.astro";
     </article>
   </div><section class="panel">
     <div class="panel-head">
-      <div><p class="kicker">Runtime inventory</p><h2>Containers</h2></div><a
-        class="text-link"
-        href="/app/containers/">View all →</a
+      <div><p class="kicker">Runtime inventory</p><h2>Containers</h2></div><div
+        class="panel-actions"
       >
+        <div class="sort-control compact">
+          <span>Sort by</span><div class="sort-field">
+            <select id="overview-sort"
+              ><option value="name">Container</option><option value="status"
+                >Status</option
+              ><option value="resources">Resources</option><option value="risk"
+                >Risk</option
+              ></select
+            ><button
+              class="sort-direction"
+              id="overview-sort-direction"
+              type="button"
+              title="Ascending"
+              aria-label="Sort ascending">↑</button>
+          </div>
+        </div><a class="text-link" href="/app/containers/">View all →</a>
+      </div>
     </div><div class="table-wrap">
-      <table>
+      <table class="overview-table">
         <thead
           ><tr
-            ><th>Name</th><th>Status</th><th>Image</th><th>Ports</th><th
-              >System</th
-            ></tr
+            ><th>Container</th><th>Status</th><th>Resources</th><th
+              >Published ports</th
+            ><th>Risk</th></tr
           ></thead
         ><tbody id="overview-containers"
           ><tr><td colspan="5" class="empty">Loading containers…</td></tr
