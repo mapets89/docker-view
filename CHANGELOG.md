@@ -13,4 +13,4 @@ All notable changes are documented here. This project follows Keep a Changelog c
 - Prevented Users, Roles, and Policies listings from deadlocking when SQLite uses a single connection.
 - Corrected audit metadata decoding from SQLite text values so existing events can be listed.
 - Standardized empty administrative collections as JSON arrays instead of `null`, with defensive handling in the Policies and Audit UI.
-- Prevented a cached first-run page from showing administrator setup again after logout.
+- Prevented the login and first-run forms from appearing simultaneously by enforcing the HTML `hidden` state, while keeping authentication pages and status responses uncached.

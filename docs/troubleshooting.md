@@ -30,4 +30,6 @@ This indicates an older build returned `null` for an empty policy collection. Cu
 
 ## Logout shows administrator setup again
 
-The public setup status and login HTML must not be cached. Current builds send `Cache-Control: no-store`, replace the authenticated history entry during logout, and refresh pages restored from the browser back-forward cache. The bootstrap endpoint also remains atomically closed while any user exists, so the stale form cannot create a second initial administrator.
+If the login and administrator setup forms appear at the same time, the page layout CSS is overriding the browser's default styling for the HTML `hidden` attribute. Current builds explicitly enforce `[hidden] { display: none !important; }`. They also send `Cache-Control: no-store`, replace the authenticated history entry during logout, and refresh pages restored from the browser back-forward cache.
+
+The Server remains authoritative: `/api/v1/status` only reports `needs_setup: true` when the user table is empty, and the bootstrap transaction refuses to create another initial administrator while any user exists.
