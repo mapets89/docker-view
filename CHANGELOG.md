@@ -15,6 +15,7 @@ All notable changes are documented here. This project follows Keep a Changelog c
 
 ### Fixed
 
+- Updated golangci-lint Action to the signed `v9.3.0` commit, which runs on Node.js 24 instead of the deprecated Node.js 20 runtime.
 - Updated CI and Docker builders to Go 1.26.10 to address `GO-2026-6809` in the standard library's `crypto/x509` certificate verification.
 - Removed brittle Alpine package revision pins while retaining digest-pinned base images and vulnerability scanning.
 - Updated Astro and patched frontend transitive dependencies so `npm audit --audit-level=high` reports no vulnerabilities.
