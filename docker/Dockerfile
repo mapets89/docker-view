@@ -5,7 +5,7 @@ RUN npm ci --ignore-scripts
 COPY frontend/ ./
 RUN npm run check && npm run build
 
-FROM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS backend
+FROM golang:1.26.10-alpine@sha256:a2012b4a1d1f9f7e9f44e0d39b805a901e856b1dd80b4e6ee4338db547050308 AS backend
 WORKDIR /src/backend
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
@@ -13,7 +13,7 @@ COPY backend/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/dockerview-server ./cmd/server
 
 FROM alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
-RUN apk add --no-cache libcrypto3=3.5.8-r0 libssl3=3.5.8-r0 \
+RUN apk add --no-cache libcrypto3 libssl3 \
     && addgroup -S -g 10001 dockerview && adduser -S -D -H -u 10001 -G dockerview dockerview \
     && mkdir -p /app/web /data && chown -R dockerview:dockerview /app /data
 COPY --from=backend /out/dockerview-server /usr/local/bin/dockerview-server

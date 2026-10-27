@@ -89,7 +89,7 @@ make typecheck
 make security
 ```
 
-The production frontend is a static Astro build served by Go; Node is not present at runtime. The pinned frontend uses Astro 7.3.1 and the native Go TypeScript 7.0.2 compiler. Because TypeScript 7.0 has no programmatic API and Astro's template checker still needs one, `astro check` uses the official `@typescript/typescript6` 6.0.2 compatibility package side-by-side; `npm run typecheck` is TS 7 and is mandatory. Details are in [development](docs/development.md).
+The production frontend is a static Astro build served by Go; Node is not present at runtime. The pinned frontend uses Astro 7.4.2 and the native Go TypeScript 7.0.2 compiler. Because TypeScript 7.0 has no programmatic API and Astro's template checker still needs one, `astro check` uses the official `@typescript/typescript6` 6.0.2 compatibility package side-by-side; `npm run typecheck` is TS 7 and is mandatory. Details are in [development](docs/development.md).
 
 Backend tests do not perform destructive host operations. Integration testing against a disposable container is opt-in. CI builds and checks Go, Astro/TypeScript, Docker images, Compose, dependencies, and filesystem/container vulnerabilities.
 

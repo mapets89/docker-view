@@ -15,6 +15,9 @@ All notable changes are documented here. This project follows Keep a Changelog c
 
 ### Fixed
 
+- Updated CI and Docker builders to Go 1.26.10 to address `GO-2026-6809` in the standard library's `crypto/x509` certificate verification.
+- Removed brittle Alpine package revision pins while retaining digest-pinned base images and vulnerability scanning.
+- Updated Astro and patched frontend transitive dependencies so `npm audit --audit-level=high` reports no vulnerabilities.
 - Pinned Trivy Action to the signed `v0.36.0` commit after the legacy unprefixed release reference stopped resolving in GitHub Actions.
 - Prevented Users, Roles, and Policies listings from deadlocking when SQLite uses a single connection.
 - Corrected audit metadata decoding from SQLite text values so existing events can be listed.
