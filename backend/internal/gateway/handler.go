@@ -183,6 +183,10 @@ func (h *Handler) restart(w http.ResponseWriter, r *http.Request) {
 		problem(w, 403, "SYSTEM_CONTAINER", "System containers cannot be restarted")
 		return
 	}
+	if IsProtected(raw) {
+		problem(w, 403, "PROTECTED_CONTAINER", "Protected containers cannot be restarted")
+		return
+	}
 	if err = h.Docker.Restart(r.Context(), id); err != nil {
 		dockerProblem(w, err)
 		return
@@ -197,6 +201,10 @@ func (h *Handler) createExec(w http.ResponseWriter, r *http.Request) {
 	}
 	if IsSystem(raw) {
 		problem(w, 403, "SYSTEM_CONTAINER", "System containers cannot be accessed with exec")
+		return
+	}
+	if IsProtected(raw) {
+		problem(w, 403, "PROTECTED_CONTAINER", "Protected containers cannot be accessed with exec")
 		return
 	}
 	var in struct {

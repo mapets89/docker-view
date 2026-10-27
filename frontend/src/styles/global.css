@@ -616,6 +616,11 @@ tbody tr:last-child td {
   border-color: #274651;
   background: #101e24;
 }
+.badge.protected {
+  color: var(--amber);
+  border-color: #514323;
+  background: #201b10;
+}
 .empty {
   text-align: center !important;
   color: #536674 !important;

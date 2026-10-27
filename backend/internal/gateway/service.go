@@ -142,13 +142,17 @@ func (m *MobyService) ResizeExec(ctx context.Context, id string, cols, rows uint
 	return err
 }
 
-func IsSystem(raw json.RawMessage) bool {
+func hasEnabledLabel(raw json.RawMessage, label string) bool {
 	var v struct {
 		Config struct {
 			Labels map[string]string `json:"Labels"`
 		} `json:"Config"`
 	}
-	return json.Unmarshal(raw, &v) == nil && strings.EqualFold(v.Config.Labels["dockerview.system"], "true")
+	return json.Unmarshal(raw, &v) == nil && strings.EqualFold(v.Config.Labels[label], "true")
+}
+func IsSystem(raw json.RawMessage) bool { return hasEnabledLabel(raw, "dockerview.system") }
+func IsProtected(raw json.RawMessage) bool {
+	return hasEnabledLabel(raw, "dockerview.protected")
 }
 func ValidateShell(s string) (string, bool) {
 	switch s {

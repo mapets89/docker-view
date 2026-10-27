@@ -13,3 +13,7 @@
 | `DOCKER_GID` | `0` | Socket group supplied to non-root Gateway |
 
 Runtime binaries also support `DOCKERVIEW_GATEWAY_SECRET` or `DOCKERVIEW_GATEWAY_SECRET_FILE`; no insecure default exists. Do not commit `.env` or credential volumes.
+
+## Protecting sensitive containers
+
+Add `dockerview.protected: "true"` to a service's Compose labels to prevent terminal access and restarts through DockerView for every user, including Admins. Inspection, metrics, and logs remain available. Docker labels are fixed when a container is created, so apply the change with `docker compose up -d --force-recreate <service>`.

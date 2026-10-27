@@ -9,9 +9,10 @@ import (
 )
 
 type Resource struct {
-	Name   string
-	Labels map[string]string
-	System bool
+	Name      string
+	Labels    map[string]string
+	System    bool
+	Protected bool
 }
 type Decision struct {
 	Allowed bool
@@ -24,6 +25,9 @@ type Decision struct {
 func Evaluate(user database.User, action string, resource Resource, all []database.Policy) Decision {
 	if resource.System && (action == "container.exec" || action == "container.restart") {
 		return Decision{false, "system containers are immutable"}
+	}
+	if resource.Protected && (action == "container.exec" || action == "container.restart") {
+		return Decision{false, "protected containers cannot be accessed with exec or restarted"}
 	}
 	hasPermission := rbac.Allowed(user, action)
 	explicitAllow := false

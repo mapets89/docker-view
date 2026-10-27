@@ -1,6 +1,6 @@
 # Security architecture and adversarial review
 
-The Docker Gateway is a privileged security boundary. It is deliberately small, has no database or UI, does not expose a generic Docker API, and allowlists list, inspect, stats, logs, restart, and constrained exec. It validates container identifiers, inspects containers before actions, rejects `dockerview.system=true`, limits bodies/tail/resize/messages, permits only `/bin/bash`, `/bin/sh`, and `/bin/ash`, uses one-time short-lived attach tickets, and sanitizes Docker errors.
+The Docker Gateway is a privileged security boundary. It is deliberately small, has no database or UI, does not expose a generic Docker API, and allowlists list, inspect, stats, logs, restart, and constrained exec. It validates container identifiers, inspects containers before actions, rejects exec and restart for `dockerview.system=true` and `dockerview.protected=true`, limits bodies/tail/resize/messages, permits only `/bin/bash`, `/bin/sh`, and `/bin/ash`, uses one-time short-lived attach tickets, and sanitizes Docker errors.
 
 The Server independently enforces authentication, code-defined permissions, resource policies, immutable system policy, terminal ownership/expiry, CSRF, exact WebSocket Origin, request bounds, and rate limits. Raw inspect and environment views share the same masking traversal. Reveal needs `secret.view` server-side and creates `SECRET_REVEAL` audit.
 

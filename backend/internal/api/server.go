@@ -408,7 +408,12 @@ func (s *Server) inspectResource(ctx context.Context, id string) (map[string]int
 			}
 		}
 	}
-	return v, policies.Resource{Name: name, Labels: labels, System: strings.EqualFold(labels["dockerview.system"], "true")}, nil
+	return v, policies.Resource{
+		Name:      name,
+		Labels:    labels,
+		System:    strings.EqualFold(labels["dockerview.system"], "true"),
+		Protected: strings.EqualFold(labels["dockerview.protected"], "true"),
+	}, nil
 }
 func (s *Server) authorizeResource(w http.ResponseWriter, r *http.Request, action, id string) (map[string]interface{}, policies.Resource, bool) {
 	v, res, err := s.inspectResource(r.Context(), id)
@@ -451,7 +456,7 @@ func (s *Server) container(w http.ResponseWriter, r *http.Request) {
 	}
 	risk := riskFromInspect(v, res.System)
 	s.audit(r, sessionFrom(r).User, "CONTAINER_VIEW", "container", id, "success", "", nil)
-	respond(w, 200, map[string]interface{}{"inspect": v, "risk": risk, "system": res.System})
+	respond(w, 200, map[string]interface{}{"inspect": v, "risk": risk, "system": res.System, "protected": res.Protected})
 }
 func riskFromInspect(v map[string]interface{}, system bool) dockermodel.RiskAssessment {
 	in := dockermodel.RiskInput{System: system}
@@ -591,8 +596,8 @@ func (s *Server) createTerminal(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if _, res, ok := s.authorizeResource(w, r, "container.exec", id); !ok {
 		return
-	} else if res.System {
-		problemResponse(w, 403, "SYSTEM_CONTAINER", "System containers cannot be accessed")
+	} else if res.System || res.Protected {
+		problemResponse(w, 403, "PROTECTED_CONTAINER", "Protected containers cannot be accessed")
 		return
 	}
 	var in struct {

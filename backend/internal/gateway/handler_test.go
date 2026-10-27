@@ -13,8 +13,10 @@ import (
 )
 
 type fakeDocker struct {
-	system  bool
-	created int
+	system    bool
+	protected bool
+	created   int
+	restarted int
 }
 
 func (f *fakeDocker) Ping(context.Context) error { return nil }
@@ -29,7 +31,11 @@ func (f *fakeDocker) Inspect(_ context.Context, id string) (json.RawMessage, err
 	if f.system {
 		label = "true"
 	}
-	return json.RawMessage(`{"Id":"` + id + `","Config":{"Labels":{"dockerview.system":"` + label + `"}}}`), nil
+	protected := "false"
+	if f.protected {
+		protected = "true"
+	}
+	return json.RawMessage(`{"Id":"` + id + `","Config":{"Labels":{"dockerview.system":"` + label + `","dockerview.protected":"` + protected + `"}}}`), nil
 }
 func (f *fakeDocker) Stats(context.Context, string) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewBufferString(`{}`)), nil
@@ -37,7 +43,10 @@ func (f *fakeDocker) Stats(context.Context, string) (io.ReadCloser, error) {
 func (f *fakeDocker) Logs(context.Context, string, int, bool) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewBuffer(nil)), nil
 }
-func (f *fakeDocker) Restart(context.Context, string) error { return nil }
+func (f *fakeDocker) Restart(context.Context, string) error {
+	f.restarted++
+	return nil
+}
 func (f *fakeDocker) CreateExec(_ context.Context, _ string, shell string) (string, string, error) {
 	f.created++
 	return "exec", shell, nil
@@ -78,6 +87,35 @@ func TestGatewaySystemExecAndUnknownFieldsRejected(t *testing.T) {
 	h.ServeHTTP(w, r)
 	if w.Code != 400 || f.created != 0 {
 		t.Fatalf("arbitrary option accepted: status=%d", w.Code)
+	}
+}
+func TestGatewayProtectedContainerRejectsExecAndRestart(t *testing.T) {
+	f := &fakeDocker{protected: true}
+	h := NewHandler(f, "01234567890123456789012345678901").Router()
+	secret := "01234567890123456789012345678901"
+
+	r := httptest.NewRequest(http.MethodGet, "/v1/containers/database/", nil)
+	r.Header.Set("X-DockerView-Gateway-Secret", secret)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 200 {
+		t.Fatalf("protected inspect blocked: status=%d", w.Code)
+	}
+
+	r = httptest.NewRequest(http.MethodPost, "/v1/containers/database/exec", bytes.NewBufferString(`{"shell":"/bin/sh"}`))
+	r.Header.Set("X-DockerView-Gateway-Secret", secret)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 403 || f.created != 0 {
+		t.Fatalf("protected exec reached Docker: status=%d created=%d", w.Code, f.created)
+	}
+
+	r = httptest.NewRequest(http.MethodPost, "/v1/containers/database/restart", bytes.NewBufferString(`{}`))
+	r.Header.Set("X-DockerView-Gateway-Secret", secret)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 403 || f.restarted != 0 {
+		t.Fatalf("protected restart reached Docker: status=%d restarted=%d", w.Code, f.restarted)
 	}
 }
 func TestResizeBoundsAndShellAllowlist(t *testing.T) {

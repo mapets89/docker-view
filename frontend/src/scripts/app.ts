@@ -157,13 +157,30 @@ function nameOf(c: Container): string {
 function idOf(c: Container): string {
   return c.ID ?? c.Id ?? nameOf(c);
 }
+function hasEnabledLabel(container: Container, label: string): boolean {
+  return container.Labels?.[label]?.toLowerCase() === "true";
+}
+function isSystem(container: Container): boolean {
+  return hasEnabledLabel(container, "dockerview.system");
+}
+function isProtected(container: Container): boolean {
+  return hasEnabledLabel(container, "dockerview.protected");
+}
+function isImmutable(container: Container): boolean {
+  return isSystem(container) || isProtected(container);
+}
+function protectionBadge(container: Container): string {
+  if (isSystem(container))
+    return '<span class="badge system">System protected</span>';
+  if (isProtected(container))
+    return '<span class="badge protected">Protected</span>';
+  return "";
+}
 function riskLevel(
   container: Container,
   telemetry?: ContainerTelemetry,
 ): string | undefined {
-  return container.Labels?.["dockerview.system"] === "true"
-    ? "critical"
-    : telemetry?.risk;
+  return isSystem(container) ? "critical" : telemetry?.risk;
 }
 function compareContainers(
   a: Container,
@@ -329,7 +346,7 @@ function containerOptions(list: Container[], allowStopped = true): string {
     .filter((c) => allowStopped || c.State === "running")
     .map(
       (c) =>
-        `<option value="${esc(idOf(c))}" data-system="${c.Labels?.["dockerview.system"] ?? "false"}">${esc(nameOf(c))} · ${esc(c.State)}</option>`,
+        `<option value="${esc(idOf(c))}" data-system="${isSystem(c)}" data-protected="${isProtected(c)}">${esc(nameOf(c))} · ${esc(c.State)}</option>`,
     )
     .join("");
 }
@@ -375,7 +392,7 @@ async function overview() {
               risk = riskLevel(c, metric);
             return `<tr>
               <td class="name-cell">${esc(nameOf(c))}<small>${esc(idOf(c).slice(0, 12))}</small><span class="overview-image">${esc(c.Image)}</span></td>
-              <td data-label="Status"><span class="badge ${c.State === "running" ? "" : "stopped"}">${esc(c.State)}</span></td>
+              <td data-label="Status"><div class="state-cell"><span class="badge ${c.State === "running" ? "" : "stopped"}">${esc(c.State)}</span>${protectionBadge(c)}</div></td>
               <td data-label="Resources"><div class="usage-cell compact"><span><small>CPU</small><b data-cpu="${id}">${metric?.cpu == null ? "—" : `${metric.cpu.toFixed(1)}%`}</b></span><span><small>RAM</small><b data-memory="${id}">${metric?.memory == null ? "—" : formatBytes(metric.memory)}</b></span></div></td>
               <td data-label="Published ports"><div class="ports-cell">${esc(ports(c))}</div></td>
               <td data-label="Risk" data-risk="${id}">${risk ? `<span class="badge ${esc(risk.toLowerCase())}">${esc(risk)}</span>` : '<span class="badge">Loading…</span>'}</td>
@@ -408,7 +425,7 @@ async function overview() {
     });
   if (has("container.inspect"))
     containers
-      .filter((c) => c.Labels?.["dockerview.system"] !== "true")
+      .filter((c) => !isSystem(c))
       .slice(0, 25)
       .forEach((c) => {
         const id = idOf(c);
@@ -449,7 +466,7 @@ async function containersPage() {
       body.innerHTML =
         list
           .map((c) => {
-            const system = c.Labels?.["dockerview.system"] === "true";
+            const immutable = isImmutable(c);
             const rawID = idOf(c),
               id = esc(rawID),
               metric = telemetry.get(rawID),
@@ -461,10 +478,10 @@ async function containersPage() {
               has("container.logs")
                 ? `<a class="secondary small" href="/app/logs/?container=${encodeURIComponent(idOf(c))}">Logs</a>`
                 : "",
-              has("container.exec") && !system && c.State === "running"
+              has("container.exec") && !immutable && c.State === "running"
                 ? `<a class="secondary small" href="/app/terminal/?container=${encodeURIComponent(idOf(c))}">Terminal</a>`
                 : "",
-              has("container.restart") && !system
+              has("container.restart") && !immutable
                 ? `<button class="danger small restart" data-id="${id}">Restart</button>`
                 : "",
             ]
@@ -479,6 +496,7 @@ async function containersPage() {
               <td data-label="Status">
                 <div class="state-cell">
                   <span class="badge ${c.State === "running" ? "" : "stopped"}">${esc(c.State)}</span>
+                  ${protectionBadge(c)}
                   <span class="health-state">${esc(c.Health?.Status ?? "No health check")}</span>
                   <span class="uptime-value"><small>Uptime</small><b>${esc(uptime(c))}</b></span>
                 </div>
@@ -530,7 +548,7 @@ async function containersPage() {
       });
     if (has("container.inspect"))
       list
-        .filter((c) => c.Labels?.["dockerview.system"] !== "true")
+        .filter((c) => !isSystem(c))
         .slice(0, 25)
         .forEach((c) => {
           const id = idOf(c);
@@ -623,6 +641,7 @@ async function showContainer(id: string) {
       inspect: Record<string, unknown>;
       risk: { level: string; findings: string[] };
       system: boolean;
+      protected: boolean;
     }>(`/containers/${encodeURIComponent(id)}/`);
     const v = result.inspect,
       cfg = jsonObject(v.Config),
@@ -631,7 +650,7 @@ async function showContainer(id: string) {
       mounts = Array.isArray(v.Mounts) ? v.Mounts : [],
       networks = jsonObject(jsonObject(v.NetworkSettings).Networks),
       env = Array.isArray(cfg.Env) ? cfg.Env : [];
-    content.innerHTML = `<div class="detail-head"><div><p class="kicker">Container inspect</p><h2>${esc(text(v.Name).replace(/^\//, ""))}</h2></div><span class="badge ${esc(result.risk.level.toLowerCase())}">${esc(result.risk.level)} risk</span>${result.system ? '<span class="badge system">Protected system container</span>' : ""}</div><div class="detail-tabs"><button class="active" data-tab="overview">Overview</button><button data-tab="environment">Environment</button><button data-tab="networks">Networks</button><button data-tab="mounts">Mounts</button><button data-tab="inspect">Raw inspect</button></div><div data-pane="overview"><dl class="detail-grid">${pairs({ ID: text(v.Id).slice(0, 20), Image: cfg.Image, Status: state.Status, Health: jsonObject(state.Health).Status, Created: v.Created, "Restart policy": jsonObject(host.RestartPolicy).Name, PID: state.Pid, "Network mode": host.NetworkMode })}</dl><div class="callout ${result.risk.level.toLowerCase()}"><b>${esc(result.risk.level)} runtime risk</b><p>${result.risk.findings.map(esc).join(" · ")}</p></div></div><div data-pane="environment" hidden><pre class="json">${esc(env.join("\n") || "No environment variables")}</pre>${has("secret.view") ? `<button class="secondary small" id="reveal-secrets" data-id="${esc(id)}">Reveal audited secrets</button>` : ""}</div><div data-pane="networks" hidden><dl class="detail-grid">${
+    content.innerHTML = `<div class="detail-head"><div><p class="kicker">Container inspect</p><h2>${esc(text(v.Name).replace(/^\//, ""))}</h2></div><span class="badge ${esc(result.risk.level.toLowerCase())}">${esc(result.risk.level)} risk</span>${result.system ? '<span class="badge system">Protected system container</span>' : result.protected ? '<span class="badge protected">Protected container</span>' : ""}</div><div class="detail-tabs"><button class="active" data-tab="overview">Overview</button><button data-tab="environment">Environment</button><button data-tab="networks">Networks</button><button data-tab="mounts">Mounts</button><button data-tab="inspect">Raw inspect</button></div><div data-pane="overview"><dl class="detail-grid">${pairs({ ID: text(v.Id).slice(0, 20), Image: cfg.Image, Status: state.Status, Health: jsonObject(state.Health).Status, Created: v.Created, "Restart policy": jsonObject(host.RestartPolicy).Name, PID: state.Pid, "Network mode": host.NetworkMode })}</dl><div class="callout ${result.risk.level.toLowerCase()}"><b>${esc(result.risk.level)} runtime risk</b><p>${result.risk.findings.map(esc).join(" · ")}</p></div></div><div data-pane="environment" hidden><pre class="json">${esc(env.join("\n") || "No environment variables")}</pre>${has("secret.view") ? `<button class="secondary small" id="reveal-secrets" data-id="${esc(id)}">Reveal audited secrets</button>` : ""}</div><div data-pane="networks" hidden><dl class="detail-grid">${
       Object.entries(networks)
         .map(([name, n]) => {
           const x = jsonObject(n);
@@ -761,7 +780,7 @@ async function terminalPage() {
     select.innerHTML =
       '<option value="">Select a running container…</option>' +
       containerOptions(
-        list.filter((c) => c.Labels?.["dockerview.system"] !== "true"),
+        list.filter((c) => !isImmutable(c)),
         false,
       );
   const selectedContainer = new URLSearchParams(location.search).get(
@@ -1062,7 +1081,7 @@ async function policiesPage() {
             `<article class="panel role-card"><div class="page-actions"><div><h3>${esc(p.Name)}</h3><span class="meta">${p.Enabled ? "Enabled" : "Disabled"}</span></div><span class="badge ${p.Enabled ? "" : "stopped"}">${p.Rules?.length ?? 0} rules</span></div><p class="muted">${esc(p.Description)}</p><div class="chips">${(p.Rules ?? []).map((r) => `<span class="chip">${esc(r.Effect)} ${esc(r.Action)} · ${esc(r.MatchType)}:${esc(r.MatchKey ? `${r.MatchKey}=${r.MatchValue}` : r.MatchValue)}</span>`).join("")}</div><div class="card-actions"><button class="secondary small edit-policy" data-id="${esc(p.ID)}">Edit</button><button class="danger small delete-policy" data-id="${esc(p.ID)}">Delete</button></div></article>`,
         )
         .join("") ||
-      '<article class="panel empty">No policies. Role permissions apply to all non-system containers.</article>';
+      '<article class="panel empty">No policies. Role permissions apply unless immutable container protection blocks an action.</article>';
   const bindRemove = () =>
     $$<HTMLButtonElement>(".remove-rule", rules ?? document).forEach(
       (b) => (b.onclick = () => b.parentElement?.remove()),

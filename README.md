@@ -15,6 +15,7 @@ DockerView is a lightweight, self-hosted interface for Docker inspection and con
 - Local Argon2id authentication, hashed server-side sessions, strict cookies, CSRF protection, and rate limits
 - Permission-based RBAC with Viewer, Developer, and Admin seed roles
 - Resource policies by container name glob or exact label; deny overrides allow
+- Immutable protection for sensitive containers through the `dockerview.protected=true` label
 - User, role, policy, settings, and SQLite audit administration
 - Separate, authenticated, allowlist-only Docker Gateway
 
@@ -64,6 +65,18 @@ Local authentication uses Argon2id. Session identifiers are random and stored on
 Viewer can read containers, stats, inspect, and logs. Developer adds `container.exec`. Admin receives the complete code-defined permission catalog. Roles grant actions; policies restrict matching resources. System policy is always highest priority, followed by explicit deny, explicit allow, role permission, and default deny. See [authorization](docs/authorization.md).
 
 `container.exec` is privileged: a user who can exec can potentially retrieve secrets from inside the container even without `secret.view`.
+
+To prevent every DockerView user, including Admins, from opening a terminal or restarting a sensitive container, label that service and recreate it:
+
+```yaml
+services:
+  database:
+    image: postgres:17
+    labels:
+      dockerview.protected: "true"
+```
+
+Protected containers remain available for inventory, inspection, metrics, and logs. Docker labels are immutable after container creation, so changing this setting requires recreating the target container.
 
 ## Development, build, and testing
 

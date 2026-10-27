@@ -17,6 +17,16 @@ func TestPrecedence(t *testing.T) {
 	if Evaluate(u, "container.exec", Resource{Name: "dockerview", System: true}, ps).Allowed {
 		t.Fatal("system policy bypassed")
 	}
+	if Evaluate(u, "container.exec", Resource{Name: "database", Protected: true}, ps).Allowed {
+		t.Fatal("protected exec policy bypassed")
+	}
+	u.Permissions = append(u.Permissions, "container.restart", "container.inspect")
+	if Evaluate(u, "container.restart", Resource{Name: "database", Protected: true}, ps).Allowed {
+		t.Fatal("protected restart policy bypassed")
+	}
+	if !Evaluate(u, "container.inspect", Resource{Name: "database", Protected: true}, ps).Allowed {
+		t.Fatal("protection must not block read-only operations")
+	}
 }
 func TestNoPermissionCannotBeElevatedByPolicy(t *testing.T) {
 	u := database.User{Roles: []string{"Viewer"}}
