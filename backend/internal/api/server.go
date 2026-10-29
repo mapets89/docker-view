@@ -69,6 +69,7 @@ func (s *Server) Router() http.Handler {
 				r.With(s.requirePermission("container.read")).Get("/", s.containers)
 				r.Route("/{id}", func(r chi.Router) {
 					r.With(s.requirePermission("container.inspect")).Get("/", s.container)
+					r.With(s.requirePermission("container.inspect")).Get("/risk", s.containerRisk)
 					r.With(s.requirePermission("container.stats")).Get("/stats", s.stats)
 					r.With(s.requirePermission("container.logs")).Get("/logs", s.logs)
 					r.With(s.requirePermission("container.logs")).Get("/logs/stream", s.logsStream)
@@ -429,6 +430,10 @@ func (s *Server) inspectResource(ctx context.Context, id string) (map[string]int
 	}, nil
 }
 func (s *Server) authorizeResource(w http.ResponseWriter, r *http.Request, action, id string) (map[string]interface{}, policies.Resource, bool) {
+	return s.authorizeResourceWithAudit(w, r, action, id, true)
+}
+
+func (s *Server) authorizeResourceWithAudit(w http.ResponseWriter, r *http.Request, action, id string, auditDenied bool) (map[string]interface{}, policies.Resource, bool) {
 	v, res, err := s.inspectResource(r.Context(), id)
 	if err != nil {
 		problemResponse(w, 404, "CONTAINER_NOT_FOUND", "Container not found")
@@ -437,11 +442,13 @@ func (s *Server) authorizeResource(w http.ResponseWriter, r *http.Request, actio
 	ps, _ := s.Store.ListPolicies(r.Context())
 	decision := policies.Evaluate(sessionFrom(r).User, action, res, ps)
 	if !decision.Allowed {
-		auditAction := strings.ToUpper(strings.ReplaceAll(action, ".", "_")) + "_DENIED"
-		if action == "container.exec" {
-			auditAction = "EXEC_DENIED"
+		if auditDenied {
+			auditAction := strings.ToUpper(strings.ReplaceAll(action, ".", "_")) + "_DENIED"
+			if action == "container.exec" {
+				auditAction = "EXEC_DENIED"
+			}
+			s.audit(r, sessionFrom(r).User, auditAction, "container", id, "denied", decision.Reason, nil)
 		}
-		s.audit(r, sessionFrom(r).User, auditAction, "container", id, "denied", decision.Reason, nil)
 		problemResponse(w, 403, "POLICY_DENIED", decision.Reason)
 		return v, res, false
 	}
@@ -468,8 +475,19 @@ func (s *Server) container(w http.ResponseWriter, r *http.Request) {
 		maskInspect(v)
 	}
 	risk := riskFromInspect(v, res.System)
-	s.audit(r, sessionFrom(r).User, "CONTAINER_VIEW", "container", id, "success", "", nil)
+	if !reveal {
+		s.audit(r, sessionFrom(r).User, "CONTAINER_INSPECT", "container", id, "success", "", nil)
+	}
 	respond(w, 200, map[string]interface{}{"inspect": v, "risk": risk, "system": res.System, "protected": res.Protected})
+}
+
+func (s *Server) containerRisk(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	v, res, ok := s.authorizeResourceWithAudit(w, r, "container.inspect", id, false)
+	if !ok {
+		return
+	}
+	respond(w, 200, map[string]interface{}{"risk": riskFromInspect(v, res.System)})
 }
 func riskFromInspect(v map[string]interface{}, system bool) dockermodel.RiskAssessment {
 	in := dockermodel.RiskInput{System: system}

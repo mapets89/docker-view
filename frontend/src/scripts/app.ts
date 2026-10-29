@@ -615,7 +615,7 @@ async function containersPage() {
 async function loadRiskRow(id: string, loaded?: (risk: string) => void) {
   try {
     const result = await api<{ risk: { level: string } }>(
-      `/containers/${encodeURIComponent(id)}/`,
+      `/containers/${encodeURIComponent(id)}/risk`,
     );
     const el = $<HTMLElement>(`[data-risk="${CSS.escape(id)}"]`);
     if (el)

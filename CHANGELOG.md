@@ -16,6 +16,7 @@ All notable changes are documented here. This project follows Keep a Changelog c
 
 ### Fixed
 
+- Stopped automatic risk enrichment from writing one container-view audit event per row; only explicit inspections, sensitive reads, mutations, authentication events, policy denials, and terminal activity are audited.
 - Fixed user creation rejecting the form's `enabled` field as an unknown JSON property, and added structured logging for malformed create-user requests.
 - Updated golangci-lint Action to the signed `v9.3.0` commit, which runs on Node.js 24 instead of the deprecated Node.js 20 runtime.
 - Updated CI and Docker builders to Go 1.26.10 to address `GO-2026-6809` in the standard library's `crypto/x509` certificate verification.

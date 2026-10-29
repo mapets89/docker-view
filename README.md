@@ -33,7 +33,7 @@ persistent data                              /var/run/docker.sock
 
 The Server never mounts or accesses `docker.sock`. The Gateway has no frontend, user database, generic proxy, or published host port. Both application containers carry `dockerview.system=true`; DockerView refuses exec and restart against any container with that label, including for Admins.
 
-See [architecture](docs/architecture.md), [storage and backup](docs/storage.md), [security model](docs/security.md), [threat model](docs/threat-model.md), and the documented [V1 implementation decisions](docs/decisions.md).
+See [architecture](docs/architecture.md), [storage and backup](docs/storage.md), [audit semantics](docs/audit.md), [security model](docs/security.md), [threat model](docs/threat-model.md), and the documented [V1 implementation decisions](docs/decisions.md).
 
 ## Requirements
 

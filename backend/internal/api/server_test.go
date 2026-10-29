@@ -186,4 +186,81 @@ func TestSecretPermissionStillMasksWhenGlobalMaskingDisabled(t *testing.T) {
 	if strings.Contains(w.Body.String(), "top-secret") || !strings.Contains(w.Body.String(), "DB_PASSWORD=********") {
 		t.Fatalf("response did not enforce secret.view masking: %s", w.Body.String())
 	}
+	events, err := store.ListAudit(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Action != "CONTAINER_INSPECT" {
+		t.Fatalf("explicit inspection audit = %#v", events)
+	}
+}
+
+func TestRiskEnrichmentDoesNotWriteAudit(t *testing.T) {
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"Id":"test","Name":"/target","Config":{"Labels":{}},"HostConfig":{},"Mounts":[]}`)), Header: make(http.Header)}, nil
+	})
+	store, err := database.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	user, err := store.CreateUser(context.Background(), "viewer", "correct horse battery staple", []string{"role-viewer"}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := store.CreateSession(context.Background(), user.ID, "", "", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := New(config.Config{GatewayURL: "http://gateway", GatewaySecret: "01234567890123456789012345678901", MaxBodyBytes: 1 << 20, SessionTTL: time.Hour}, store)
+	server.Gateway.HTTP = &http.Client{Transport: transport}
+	request := httptest.NewRequest(http.MethodGet, "http://localhost/api/v1/containers/test/risk", nil)
+	request.AddCookie(&http.Cookie{Name: sessionCookie, Value: token})
+	response := httptest.NewRecorder()
+	server.Router().ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("risk enrichment returned %d: %s", response.Code, response.Body.String())
+	}
+	events, err := store.ListAudit(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 0 {
+		t.Fatalf("risk enrichment wrote audit events: %#v", events)
+	}
+}
+
+func TestSecretRevealWritesOnlyRevealAudit(t *testing.T) {
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"Id":"test","Name":"/target","Config":{"Labels":{},"Env":["DB_PASSWORD=top-secret"]},"HostConfig":{},"Mounts":[]}`)), Header: make(http.Header)}, nil
+	})
+	store, err := database.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	admin, err := store.BootstrapAdmin(context.Background(), "admin", "correct horse battery staple")
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := store.CreateSession(context.Background(), admin.ID, "", "", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := New(config.Config{GatewayURL: "http://gateway", GatewaySecret: "01234567890123456789012345678901", MaxBodyBytes: 1 << 20, SessionTTL: time.Hour, SecretMasking: true}, store)
+	server.Gateway.HTTP = &http.Client{Transport: transport}
+	request := httptest.NewRequest(http.MethodGet, "http://localhost/api/v1/containers/test/?reveal=true", nil)
+	request.AddCookie(&http.Cookie{Name: sessionCookie, Value: token})
+	response := httptest.NewRecorder()
+	server.Router().ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("secret reveal returned %d: %s", response.Code, response.Body.String())
+	}
+	events, err := store.ListAudit(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Action != "SECRET_REVEAL" {
+		t.Fatalf("secret reveal audit = %#v", events)
+	}
 }
