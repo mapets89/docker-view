@@ -934,7 +934,7 @@ async function usersPage() {
     body.innerHTML = users
       .map(
         (u) =>
-          `<tr><td class="name-cell">${esc(u.Username)}<small>${esc(u.ID.slice(0, 10))}</small></td><td><span class="badge ${u.Enabled ? "" : "stopped"}">${u.Enabled ? "enabled" : "disabled"}</span></td><td>${esc((u.Roles ?? []).join(", "))}</td><td>${esc(fmtDate(u.CreatedAt))}</td><td>${esc(fmtDate(u.LastLoginAt))}</td><td><button class="secondary small edit-user" data-id="${esc(u.ID)}">Edit</button> <button class="secondary small invalidate" data-id="${esc(u.ID)}">Invalidate sessions</button></td></tr>`,
+          `<tr><td class="name-cell">${esc(u.Username)}</td><td><span class="badge ${u.Enabled ? "" : "stopped"}">${u.Enabled ? "enabled" : "disabled"}</span></td><td>${esc((u.Roles ?? []).join(", "))}</td><td>${esc(fmtDate(u.CreatedAt))}</td><td>${esc(fmtDate(u.LastLoginAt))}</td><td><button class="secondary small edit-user" data-id="${esc(u.ID)}">Edit</button> <button class="secondary small invalidate" data-id="${esc(u.ID)}">Invalidate sessions</button></td></tr>`,
       )
       .join("");
   const roleOptions = (selected: string[] = []) =>

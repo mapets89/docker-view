@@ -13,6 +13,7 @@ All notable changes are documented here. This project follows Keep a Changelog c
 ### Changed
 
 - Redesigned the container inventories with responsive table and card layouts, and added sorting by container, status, resources, and risk to both Overview and Containers.
+- Removed opaque internal IDs from the Users table and changed newly generated entity IDs from Base64URL to compact 32-character hexadecimal values.
 
 ### Fixed
 

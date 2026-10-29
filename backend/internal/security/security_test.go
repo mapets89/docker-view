@@ -1,6 +1,29 @@
 package security
 
-import "testing"
+import (
+	"encoding/hex"
+	"testing"
+)
+
+func TestIDIsCompactHex(t *testing.T) {
+	first, err := ID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := ID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != 32 {
+		t.Fatalf("ID length = %d, want 32", len(first))
+	}
+	if _, err = hex.DecodeString(first); err != nil {
+		t.Fatalf("ID is not hexadecimal: %q", first)
+	}
+	if first == second {
+		t.Fatal("generated duplicate IDs")
+	}
+}
 
 func TestPasswordRoundTrip(t *testing.T) {
 	h, err := HashPassword("a good password phrase")
