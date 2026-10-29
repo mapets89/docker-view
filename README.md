@@ -111,7 +111,25 @@ See [troubleshooting](docs/troubleshooting.md).
 
 ## Screenshots
 
-Screenshots will be added after the first public preview. The implemented UI is dark-first, responsive, keyboard-accessible, and uses an original layered-container visual identity.
+### Sign in
+
+![DockerView sign-in screen](docs/images/login.png)
+
+### Overview
+
+![DockerView overview showing container status and resource usage](docs/images/home-page.png)
+
+### Container inspection
+
+![DockerView container inspection](docs/images/inspect.png)
+
+### Logs
+
+![DockerView container logs](docs/images/logs.png)
+
+### Terminal
+
+![DockerView container terminal](docs/images/terminal.png)
 
 ## Roadmap and contribution status
 
