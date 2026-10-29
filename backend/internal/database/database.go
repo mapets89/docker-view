@@ -339,6 +339,49 @@ func (s *Store) UpdateUser(ctx context.Context, id string, enabled *bool, roles 
 	}
 	return tx.Commit()
 }
+
+// RecoverPassword performs host-authorized emergency recovery. It changes only
+// the password, revokes every active session, and records the operation in the
+// same transaction.
+func (s *Store) RecoverPassword(ctx context.Context, username, password string) (User, error) {
+	hash, err := security.HashPassword(password)
+	if err != nil {
+		return User{}, err
+	}
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return User{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var id, canonicalUsername string
+	var enabled bool
+	if err = tx.QueryRowContext(ctx, `SELECT id,username,enabled FROM users WHERE username=?`, username).Scan(&id, &canonicalUsername, &enabled); err == sql.ErrNoRows {
+		return User{}, errors.New("user not found")
+	} else if err != nil {
+		return User{}, err
+	}
+	if !enabled {
+		return User{}, errors.New("user is disabled; another administrator must enable it")
+	}
+	timestamp := now()
+	if _, err = tx.ExecContext(ctx, `UPDATE users SET password_hash=?,updated_at=? WHERE id=?`, hash, timestamp, id); err != nil {
+		return User{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL`, timestamp, id); err != nil {
+		return User{}, err
+	}
+	auditID, err := security.ID()
+	if err != nil {
+		return User{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,timestamp,user_id,username,source_ip,action,resource_type,resource_id,result,reason,session_id,metadata) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, auditID, timestamp, id, canonicalUsername, "local-host", "PASSWORD_RECOVERY", "user", id, "success", "emergency host recovery", "", `{"source":"host-cli"}`); err != nil {
+		return User{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return User{}, err
+	}
+	return s.GetUser(ctx, id)
+}
 func (s *Store) ActiveAdminCount(ctx context.Context) (int, error) {
 	var n int
 	err := s.DB.QueryRowContext(ctx, `SELECT COUNT(DISTINCT u.id) FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE u.enabled=1 AND r.name='Admin'`).Scan(&n)

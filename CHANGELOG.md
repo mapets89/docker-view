@@ -8,6 +8,7 @@ All notable changes are documented here. This project follows Keep a Changelog c
 
 - Initial DockerView V1 implementation: split Server/Gateway architecture, local auth, sessions, RBAC, policies, audit, inspection, stats, risk analysis, masked environment and inspect, SSE logs, xterm terminal, admin UI, hardened Compose, CI, tests, and security documentation.
 - Added immutable `dockerview.protected=true` enforcement for sensitive containers, blocking exec and restart for every user at both the Server and Gateway layers.
+- Added interactive Docker-host password recovery for local accounts, including session revocation and audit logging.
 
 ### Changed
 

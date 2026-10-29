@@ -130,3 +130,43 @@ func TestEmptyAdministrativeCollectionsAreNotNil(t *testing.T) {
 		t.Fatal("empty audit events must serialize as [] instead of null")
 	}
 }
+
+func TestRecoverPasswordRevokesSessionsAndWritesAudit(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	user, err := store.BootstrapAdmin(ctx, "admin", "old password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := store.CreateSession(ctx, user.ID, "127.0.0.1", "test", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recovered, err := store.RecoverPassword(ctx, "ADMIN", "new secure password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recovered.ID != user.ID {
+		t.Fatalf("recovered user = %q, want %q", recovered.ID, user.ID)
+	}
+	if _, ok, err := store.Authenticate(ctx, "admin", "old password"); err != nil || ok {
+		t.Fatalf("old password remained valid: ok=%v err=%v", ok, err)
+	}
+	if _, ok, err := store.Authenticate(ctx, "admin", "new secure password"); err != nil || !ok {
+		t.Fatalf("new password was rejected: ok=%v err=%v", ok, err)
+	}
+	if _, err := store.ResolveSession(ctx, token); err == nil {
+		t.Fatal("existing session remained valid after recovery")
+	}
+	events, err := store.ListAudit(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Action != "PASSWORD_RECOVERY" || events[0].Username != "admin" {
+		t.Fatalf("unexpected recovery audit: %#v", events)
+	}
+}

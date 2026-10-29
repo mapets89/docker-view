@@ -62,6 +62,8 @@ Copy `.env.example`; common settings include the public port, instance/environme
 
 Local authentication uses Argon2id. Session identifiers are random and stored only as SHA-256 hashes; sessions are server-side, expiring, revocable, and use `HttpOnly`, `SameSite=Strict` cookies. CSRF tokens and exact Origin checks protect mutations and terminal WebSockets.
 
+Administrators can reset local user passwords from Users. Emergency recovery for the only Administrator is available exclusively from an interactive Docker-host command; it revokes existing sessions and writes an audit event. See [authentication](docs/authentication.md).
+
 Viewer can read containers, stats, inspect, and logs. Developer adds `container.exec`. Admin receives the complete code-defined permission catalog. Roles grant actions; policies restrict matching resources. System policy is always highest priority, followed by explicit deny, explicit allow, role permission, and default deny. See [authorization](docs/authorization.md).
 
 `container.exec` is privileged: a user who can exec can potentially retrieve secrets from inside the container even without `secret.view`.

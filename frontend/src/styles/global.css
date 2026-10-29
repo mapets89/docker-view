@@ -949,6 +949,29 @@ dialog form {
   min-height: 16px;
   font-size: 11px;
 }
+.recovery-help {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.recovery-help summary {
+  color: #9fb3bf;
+  cursor: pointer;
+  font-weight: 700;
+}
+.recovery-help p {
+  margin: 10px 0 7px;
+}
+.recovery-help code {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #080d12;
+  color: #b8c8d1;
+  user-select: all;
+}
 .muted {
   color: var(--muted);
   line-height: 1.6;

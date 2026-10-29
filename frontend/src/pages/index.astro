@@ -12,9 +12,7 @@ import "../styles/global.css";
       rel="icon"
       href="/favicon.svg"
       type="image/svg+xml"
-    /><title>
-      DockerView · Sign in
-    </title></head
+    /><title>DockerView · Sign in</title></head
   >
   <body data-page="auth" class="auth-page"
     ><main class="auth-shell">
@@ -57,7 +55,17 @@ import "../styles/global.css";
               maxlength="1024"
             /></label
           ><button class="primary" type="submit">Sign in <span>→</span></button
-          ><p class="form-error" role="alert"></p>
+          ><p class="form-error" role="alert"></p><details
+            class="recovery-help"
+          >
+            <summary>Forgot password?</summary><p>
+              Ask another Administrator to reset it from Users. If this is the
+              only Administrator, run this command on the Docker host:
+            </p><code
+              >docker compose exec dockerview dockerview-server reset-password
+              --username USERNAME</code
+            >
+          </details>
         </form><form id="setup-form" hidden>
           <p class="kicker">First run</p><h2>Create the administrator</h2><p
             class="muted"
