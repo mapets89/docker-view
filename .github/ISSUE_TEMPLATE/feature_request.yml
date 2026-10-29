@@ -1,0 +1,46 @@
+name: "💡 Feature Request"
+description: Suggest an improvement or new feature for DockerView.
+title: "[Feature] "
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to improve DockerView?
+
+        I'd love to hear your feedback and suggestions!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the problem or limitation you encountered.
+      placeholder: Explain the use case.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like DockerView to handle this?
+      placeholder: Describe your idea.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Additional Context
+      description: Any additional information, examples or screenshots?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before Submitting
+      options:
+        - label: I have checked existing issues for similar suggestions.
+          required: true
