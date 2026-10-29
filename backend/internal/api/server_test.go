@@ -130,7 +130,7 @@ func TestStaticReplacesStaleHashedAssetAndRejectsUnknownAssets(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(assetDir, "global.CURRENT.css"), []byte(css), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	server := &Server{Cfg: config.Config{StaticDir: staticDir}}
+	server := &Server{Cfg: config.Config{StaticDir: staticDir, StaticEnabled: true}}
 
 	stale := httptest.NewRequest(http.MethodGet, "http://localhost/_astro/global.OLD.css", nil)
 	staleResponse := httptest.NewRecorder()
@@ -150,6 +150,19 @@ func TestStaticReplacesStaleHashedAssetAndRejectsUnknownAssets(t *testing.T) {
 	server.static(missingResponse, missing)
 	if missingResponse.Code != http.StatusNotFound {
 		t.Fatalf("unknown asset returned %d, want 404", missingResponse.Code)
+	}
+}
+
+func TestStaticFilesDisabled(t *testing.T) {
+	staticDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("frontend"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	server := &Server{Cfg: config.Config{StaticDir: staticDir, StaticEnabled: false}}
+	response := httptest.NewRecorder()
+	server.static(response, httptest.NewRequest(http.MethodGet, "http://localhost/", nil))
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("static files disabled: got %d, want 404", response.Code)
 	}
 }
 

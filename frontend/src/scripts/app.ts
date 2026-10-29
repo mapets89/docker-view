@@ -291,39 +291,25 @@ async function initAuth() {
     });
     loading?.setAttribute("hidden", "");
     $("#login-form")?.setAttribute("hidden", "");
-    $("#setup-form")?.setAttribute("hidden", "");
+    $("#setup-help")?.setAttribute("hidden", "");
     if (status.needs_setup) {
-      if (loading) {
-        loading.removeAttribute("hidden");
-        loading.textContent = "Create the first administrator on the host: docker compose exec dockerview dockerview-server bootstrap --username ADMIN";
-      }
+      $("#setup-help")?.removeAttribute("hidden");
       return;
     }
-    const form = $<HTMLFormElement>(
-      status.needs_setup ? "#setup-form" : "#login-form",
-    );
+    const form = $<HTMLFormElement>("#login-form");
     form?.removeAttribute("hidden");
     form?.addEventListener("submit", async (e) => {
       e.preventDefault();
       if ($<HTMLButtonElement>('button[type="submit"]', form)?.disabled) return;
-      if (status.needs_setup) {
-        const data = new FormData(form);
-        if (data.get("password") !== data.get("confirm")) {
-          showError(form, new Error("Passwords do not match"));
-          return;
-        }
-      }
       const data = Object.fromEntries(new FormData(form));
-      delete data.confirm;
       try {
-        await api(status.needs_setup ? "/bootstrap" : "/auth/login", {
+        await api("/auth/login", {
           method: "POST",
           body: JSON.stringify(data),
         });
         location.replace("/app/overview/");
       } catch (err) {
         if (
-          !status.needs_setup &&
           err instanceof APIError &&
           err.code === "RATE_LIMITED" &&
           err.retryAfter

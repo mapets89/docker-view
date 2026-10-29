@@ -66,39 +66,24 @@ import "../styles/global.css";
               --username USERNAME</code
             >
           </details>
-        </form><form id="setup-form" hidden>
-          <p class="kicker">First run</p><h2>Create the administrator</h2><p
-            class="muted"
+        </form><div id="setup-help" class="recovery-help" hidden>
+          <p class="kicker">First run</p><h2>Create the administrator</h2>
+          <p>
+            Run the appropriate command in a terminal on the host, replacing
+            ADMIN with your username. You will be prompted for a password.
+          </p>
+          <p>Compose, from the project directory:</p>
+          <code
+            >docker compose exec dockerview dockerview-server bootstrap
+            --username ADMIN</code
           >
-            No default credentials. This setup closes permanently after the
-            first account is created.
-          </p><label
-            >Username<input
-              name="username"
-              autocomplete="username"
-              required
-              pattern="[A-Za-z][A-Za-z0-9_.-]{2,63}"
-            /></label
-          ><label
-            >Password<input
-              name="password"
-              type="password"
-              autocomplete="new-password"
-              required
-              minlength="6"
-              maxlength="1024"
-            /></label
-          ><label
-            >Confirm password<input
-              name="confirm"
-              type="password"
-              autocomplete="new-password"
-              required
-            /></label
-          ><button class="primary" type="submit"
-            >Create secure instance <span>→</span></button
-          ><p class="form-error" role="alert"></p>
-        </form>
+          <p>Local development, from the project directory:</p>
+          <code
+            >cd backend &amp;&amp; DOCKERVIEW_DB_PATH=../.local/dockerview.db go
+            run ./cmd/server bootstrap --username ADMIN</code
+          >
+          <p>After creating the account, refresh this page and sign in.</p>
+        </div>
       </section>
     </main><script>
       import "../scripts/app.ts";

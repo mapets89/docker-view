@@ -13,7 +13,7 @@ type Config struct {
 	InstanceName, Environment                                                   string
 	SessionTTL, TerminalIdle                                                    time.Duration
 	LogTailDefault                                                              int
-	CookieSecure, SecretMasking                                                 bool
+	CookieSecure, SecretMasking, StaticEnabled                                  bool
 	AllowedOrigins                                                              []string
 	MaxBodyBytes                                                                int64
 }
@@ -35,7 +35,8 @@ func Load(component string) (Config, error) {
 		SessionTTL: duration("DOCKERVIEW_SESSION_TTL", 12*time.Hour), TerminalIdle: duration("DOCKERVIEW_TERMINAL_IDLE_TIMEOUT", 15*time.Minute),
 		LogTailDefault: integer("DOCKERVIEW_LOG_TAIL_DEFAULT", 500), CookieSecure: boolean("DOCKERVIEW_COOKIE_SECURE", true),
 		SecretMasking: boolean("DOCKERVIEW_SECRET_MASKING", true), AllowedOrigins: split(env("DOCKERVIEW_ALLOWED_ORIGINS", "http://localhost:8080")),
-		MaxBodyBytes: int64(integer("DOCKERVIEW_MAX_BODY_BYTES", 1<<20)),
+		StaticEnabled: boolean("DOCKERVIEW_STATIC_ENABLED", true),
+		MaxBodyBytes:  int64(integer("DOCKERVIEW_MAX_BODY_BYTES", 1<<20)),
 	}
 	if (component == "server" || component == "gateway") && len(c.GatewaySecret) < 32 {
 		return c, fmt.Errorf("DOCKERVIEW_GATEWAY_SECRET must contain at least 32 characters")

@@ -200,6 +200,11 @@ a {
   place-items: center;
   font-weight: 800;
 }
+.app-version {
+  padding: 12px 4px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
 .account button,
 .icon-button {
   border: 0;
@@ -1176,6 +1181,11 @@ dialog form {
   .account > div:not(.avatar),
   .account button {
     display: none;
+  }
+  .app-version {
+    padding-inline: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
   }
   .topbar,
   .content {

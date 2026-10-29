@@ -76,7 +76,7 @@ fi
   cd "$project_dir/backend"
   DOCKERVIEW_LISTEN_ADDR=127.0.0.1:8080 \
   DOCKERVIEW_DB_PATH="$state_dir/dockerview.db" \
-  DOCKERVIEW_STATIC_DIR="$project_dir/frontend/dist" \
+  DOCKERVIEW_STATIC_ENABLED=false \
   DOCKERVIEW_GATEWAY_URL=http://127.0.0.1:8081 \
   DOCKERVIEW_GATEWAY_SECRET="$gateway_secret" \
   DOCKERVIEW_COOKIE_SECURE=false \

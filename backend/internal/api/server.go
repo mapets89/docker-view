@@ -130,6 +130,10 @@ func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 		problemResponse(w, 404, "NOT_FOUND", "Endpoint not found")
 		return
 	}
+	if !s.Cfg.StaticEnabled {
+		http.NotFound(w, r)
+		return
+	}
 	clean := filepath.Clean("/" + r.URL.Path)
 	name := filepath.Join(s.Cfg.StaticDir, clean)
 	if info, err := os.Stat(name); err == nil && info.IsDir() {

@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { version } from "../../package.json";
 interface Props {
   title: string;
   page: string;
@@ -97,6 +98,9 @@ const { title, page, eyebrow = "Operations" } = Astro.props;
           </div><button id="logout" title="Sign out" aria-label="Sign out"
             >↪</button
           >
+        </div>
+        <div class="app-version" aria-label={`DockerView version ${version}`}>
+          v{version}
         </div>
       </aside>
       <main>
