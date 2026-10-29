@@ -292,6 +292,13 @@ async function initAuth() {
     loading?.setAttribute("hidden", "");
     $("#login-form")?.setAttribute("hidden", "");
     $("#setup-form")?.setAttribute("hidden", "");
+    if (status.needs_setup) {
+      if (loading) {
+        loading.removeAttribute("hidden");
+        loading.textContent = "Create the first administrator on the host: docker compose exec dockerview dockerview-server bootstrap --username ADMIN";
+      }
+      return;
+    }
     const form = $<HTMLFormElement>(
       status.needs_setup ? "#setup-form" : "#login-form",
     );

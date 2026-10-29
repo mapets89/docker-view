@@ -58,7 +58,6 @@ func (s *Server) Router() http.Handler {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(noStore)
 		r.Get("/status", s.status)
-		r.Post("/bootstrap", s.bootstrap)
 		r.Post("/auth/login", s.login)
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireSession)
@@ -439,7 +438,11 @@ func (s *Server) authorizeResourceWithAudit(w http.ResponseWriter, r *http.Reque
 		problemResponse(w, 404, "CONTAINER_NOT_FOUND", "Container not found")
 		return nil, res, false
 	}
-	ps, _ := s.Store.ListPolicies(r.Context())
+	ps, err := s.Store.ListPolicies(r.Context())
+	if err != nil {
+		problemResponse(w, 500, "DATABASE_ERROR", "Unable to load policies")
+		return nil, res, false
+	}
 	decision := policies.Evaluate(sessionFrom(r).User, action, res, ps)
 	if !decision.Allowed {
 		if auditDenied {
@@ -719,14 +722,7 @@ func (s *Server) terminalWS(w http.ResponseWriter, r *http.Request) {
 	go copyWS(browser, gateway)
 	go func() {
 		idle := s.terminalIdle(context.Background())
-		interval := idle / 4
-		if interval > time.Minute {
-			interval = time.Minute
-		}
-		if interval < time.Second {
-			interval = time.Second
-		}
-		ticker := time.NewTicker(interval)
+		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
@@ -734,6 +730,22 @@ func (s *Server) terminalWS(w http.ResponseWriter, r *http.Request) {
 				return
 			case <-ticker.C:
 				if time.Since(time.Unix(0, lastActivity.Load())) >= idle {
+					done <- struct{}{}
+					return
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+				cookie, cookieErr := r.Cookie(sessionCookie)
+				valid := false
+				if cookieErr == nil {
+					current, sessionErr := s.Store.ResolveSession(ctx, cookie.Value)
+					if sessionErr == nil {
+						_, resource, resourceErr := s.inspectResource(ctx, x.ContainerID)
+						ps, policyErr := s.Store.ListPolicies(ctx)
+						valid = resourceErr == nil && policyErr == nil && policies.Evaluate(current.User, "container.exec", resource, ps).Allowed
+					}
+				}
+				cancel()
+				if !valid {
 					done <- struct{}{}
 					return
 				}
@@ -780,7 +792,7 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	target, err := s.Store.GetUser(r.Context(), id)
+	_, err := s.Store.GetUser(r.Context(), id)
 	if err != nil {
 		problemResponse(w, 404, "USER_NOT_FOUND", "User not found")
 		return
@@ -802,15 +814,11 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 		problemResponse(w, 429, "RATE_LIMITED", "Too many password resets")
 		return
 	}
-	removesAdmin := in.Enabled != nil && !*in.Enabled || in.Roles != nil && !contains(*in.Roles, "Admin")
-	if contains(target.Roles, "Admin") && removesAdmin {
-		n, _ := s.Store.ActiveAdminCount(r.Context())
-		if n <= 1 {
-			problemResponse(w, 409, "LAST_ADMIN", "The last enabled administrator cannot be disabled or demoted")
+	if err = s.Store.UpdateUser(r.Context(), id, in.Enabled, roles, in.Password); err != nil {
+		if errors.Is(err, database.ErrLastAdmin) {
+			problemResponse(w, 409, "LAST_ADMIN", err.Error())
 			return
 		}
-	}
-	if err = s.Store.UpdateUser(r.Context(), id, in.Enabled, roles, in.Password); err != nil {
 		problemResponse(w, 400, "USER_UPDATE_FAILED", err.Error())
 		return
 	}

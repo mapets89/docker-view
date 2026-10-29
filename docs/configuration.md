@@ -6,7 +6,7 @@ Copy `.env.example` to `.env` before starting Compose. These values are interpol
 
 | Variable | Local default | Purpose |
 |---|---|---|
-| `DOCKERVIEW_PORT` | `8080` | Published web port |
+| `DOCKERVIEW_PORT` | `8080` | Web port published on localhost only |
 | `DOCKERVIEW_INSTANCE_NAME` | `DockerView` | Initial UI instance label |
 | `DOCKERVIEW_ENVIRONMENT` | `DEV` | Initial environment label |
 | `DOCKERVIEW_SESSION_TTL` | `12h` | Login session lifetime |

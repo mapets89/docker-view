@@ -18,6 +18,7 @@ import (
 type Store struct{ DB *sql.DB }
 
 var dummyPasswordHash = func() string { h, _ := security.HashPassword("DockerView timing equalization value"); return h }()
+var ErrLastAdmin = errors.New("the last enabled administrator cannot be disabled or demoted")
 
 type User struct {
 	ID, Username                string
@@ -309,6 +310,25 @@ func (s *Store) UpdateUser(ctx context.Context, id string, enabled *bool, roles 
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
+	var isEnabledAdmin bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users u JOIN user_roles ur ON ur.user_id=u.id WHERE u.id=? AND u.enabled=1 AND ur.role_id='role-admin')`, id).Scan(&isEnabledAdmin); err != nil {
+		return err
+	}
+	keepsAdmin := roles == nil
+	for _, role := range roles {
+		if role == "role-admin" || strings.EqualFold(role, "Admin") {
+			keepsAdmin = true
+		}
+	}
+	if isEnabledAdmin && (enabled != nil && !*enabled || !keepsAdmin) {
+		var count int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(DISTINCT u.id) FROM users u JOIN user_roles ur ON ur.user_id=u.id WHERE u.enabled=1 AND ur.role_id='role-admin'`).Scan(&count); err != nil {
+			return err
+		}
+		if count <= 1 {
+			return ErrLastAdmin
+		}
+	}
 	if enabled != nil {
 		if _, err = tx.ExecContext(ctx, `UPDATE users SET enabled=?,updated_at=? WHERE id=?`, *enabled, now(), id); err != nil {
 			return err
@@ -320,6 +340,9 @@ func (s *Store) UpdateUser(ctx context.Context, id string, enabled *bool, roles 
 			return e
 		}
 		if _, err = tx.ExecContext(ctx, `UPDATE users SET password_hash=?,updated_at=? WHERE id=?`, h, now(), id); err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, `UPDATE sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL`, now(), id); err != nil {
 			return err
 		}
 	}

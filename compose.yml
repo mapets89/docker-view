@@ -30,7 +30,7 @@ services:
       DOCKERVIEW_COOKIE_SECURE: ${DOCKERVIEW_COOKIE_SECURE:-false}
       DOCKERVIEW_SECRET_MASKING: ${DOCKERVIEW_SECRET_MASKING:-true}
       DOCKERVIEW_ALLOWED_ORIGINS: ${DOCKERVIEW_ALLOWED_ORIGINS:-http://localhost:8080}
-    ports: ["${DOCKERVIEW_PORT:-8080}:8080"]
+    ports: ["127.0.0.1:${DOCKERVIEW_PORT:-8080}:8080"]
     volumes: [dockerview-data:/data, dockerview-secrets:/run/dockerview-secrets:ro]
     networks: [dockerview-public, dockerview-internal]
     read_only: true

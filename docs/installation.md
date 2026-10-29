@@ -9,7 +9,7 @@ docker compose ps
 curl --fail http://localhost:8080/ready
 ```
 
-Then open <http://localhost:8080> and create the first Administrator. The example environment uses `DOCKERVIEW_COOKIE_SECURE=false` for local HTTP. Enable secure cookies only when the browser connects through HTTPS. The secret init service runs once, while named volumes retain SQLite and Gateway credentials.
+Create the first administrator with `docker compose exec dockerview dockerview-server bootstrap --username ADMIN`, then open <http://localhost:8080>. The port binds to localhost. The example environment uses `DOCKERVIEW_COOKIE_SECURE=false` for local HTTP. For remote access, use a TLS reverse proxy, set `DOCKERVIEW_COOKIE_SECURE=true`, and configure the exact HTTPS origin before exposing the proxy. The secret init service runs once, while named volumes retain SQLite and Gateway credentials.
 
 On Linux, obtain the socket group with `stat -c '%g' /var/run/docker.sock` and set `DOCKER_GID` if it is not `0`. Do not solve socket permissions with `privileged: true` or a world-writable socket. For remote access, use a TLS reverse proxy and a private/VPN network.
 

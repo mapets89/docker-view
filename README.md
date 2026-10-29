@@ -50,7 +50,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Open <http://localhost:8080>. On first launch, DockerView displays a one-time setup that creates the first Administrator. There are no default credentials. The bootstrap endpoint atomically disables itself as soon as the first account exists.
+Create the first administrator locally with `docker compose exec dockerview dockerview-server bootstrap --username ADMIN`, then open <http://localhost:8080>. The command prompts for a password and only succeeds when no user exists. There are no default credentials.
 
 The internal Gateway secret is generated automatically with 48 random bytes and persisted in the `dockerview-secrets` volume. To supply your own, use `DOCKERVIEW_GATEWAY_SECRET` outside Compose or mount a file and set `DOCKERVIEW_GATEWAY_SECRET_FILE`.
 
