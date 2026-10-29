@@ -48,7 +48,9 @@ func runPasswordRecovery(args []string, stdin *os.File, stdout io.Writer) error 
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Password reset for %s. All existing sessions were revoked.\n", user.Username)
+	if _, err = fmt.Fprintf(stdout, "Password reset for %s. All existing sessions were revoked.\n", user.Username); err != nil {
+		return fmt.Errorf("write recovery confirmation: %w", err)
+	}
 	return nil
 }
 
