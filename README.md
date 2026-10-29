@@ -33,7 +33,7 @@ persistent data                              /var/run/docker.sock
 
 The Server never mounts or accesses `docker.sock`. The Gateway has no frontend, user database, generic proxy, or published host port. Both application containers carry `dockerview.system=true`; DockerView refuses exec and restart against any container with that label, including for Admins.
 
-See [architecture](docs/architecture.md), [security model](docs/security.md), [threat model](docs/threat-model.md), and the documented [V1 implementation decisions](docs/decisions.md).
+See [architecture](docs/architecture.md), [storage and backup](docs/storage.md), [security model](docs/security.md), [threat model](docs/threat-model.md), and the documented [V1 implementation decisions](docs/decisions.md).
 
 ## Requirements
 
@@ -57,6 +57,8 @@ The internal Gateway secret is generated automatically with 48 random bytes and 
 ## Configuration
 
 Copy `.env.example`; common settings include the public port, instance/environment labels, session and terminal TTLs, default log tail, cookie security, allowed browser origins, and socket group ID. See [configuration](docs/configuration.md). For HTTPS, terminate TLS at a trusted reverse proxy, set `DOCKERVIEW_COOKIE_SECURE=true`, and set the exact HTTPS origin.
+
+SQLite is embedded in the Server. Compose stores `/data/dockerview.db` in the `dockerview_dockerview-data` named volume; local development uses `.local/dockerview.db`. There is no separate database container. Backup, restore, Docker Desktop, and destructive-reset behavior are documented in [storage](docs/storage.md).
 
 ## Authentication and authorization
 

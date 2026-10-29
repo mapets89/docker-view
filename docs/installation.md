@@ -26,4 +26,4 @@ docker compose ps
 curl --fail http://localhost:8080/ready
 ```
 
-The `dockerview-data` and `dockerview-secrets` named volumes are not removed by this procedure, so users, sessions, audit events, settings, policies, and the Gateway credential are preserved. Do not run `docker compose down -v` during a normal update because `-v` deletes those volumes.
+The `dockerview-data` and `dockerview-secrets` named volumes are not removed by this procedure, so users, sessions, audit events, settings, policies, and the Gateway credential are preserved. Do not run `docker compose down -v` during a normal update because `-v` deletes those volumes. See [Storage, backup, and restore](storage.md) for database locations, Docker Desktop behavior, and safe backup/restore procedures.

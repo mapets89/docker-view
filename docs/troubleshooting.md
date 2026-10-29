@@ -8,6 +8,17 @@ Use `docker compose ps` and `docker compose logs dockerview dockerview-gateway`.
 - Origin rejected: configure the exact scheme, host, and port in `DOCKERVIEW_ALLOWED_ORIGINS`.
 - Empty stats: the container must be running and the Engine must provide cgroup metrics.
 
+## Database and persistent data
+
+SQLite is embedded in the Server rather than a separate container. Under Compose, `/data/dockerview.db` is stored in the `dockerview_dockerview-data` named volume. Confirm that the expected volume exists and is mounted:
+
+```bash
+docker volume inspect dockerview_dockerview-data
+docker inspect "$(docker compose ps -q dockerview)" --format '{{json .Mounts}}'
+```
+
+On Docker Desktop, the volume lives inside its Linux VM. Do not edit the VM mountpoint directly, copy a live SQLite file, or use `docker compose down -v` as a troubleshooting step. Follow [Storage, backup, and restore](storage.md) before copying, restoring, or resetting data.
+
 ## Administration pages remain loading
 
 Confirm that the running containers were rebuilt from the current source:
