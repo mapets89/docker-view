@@ -1,7 +1,69 @@
 # Development
 
-Run `make dev` for the Compose workflow or run Astro and the two Go binaries separately with a strong shared `DOCKERVIEW_GATEWAY_SECRET`. Required checks are `make test lint typecheck security`.
+DockerView distinguishes the local workstation from shared non-production environments. Local mode favors rapid iteration and frontend hot reload. Development mode builds and runs the release images and security boundaries used in Development or QA. DockerView is not recommended for production deployments.
 
-Versions are pinned: Go module language 1.25 (digest-pinned Go 1.26.10 Alpine builder), Astro 7.4.2, digest-pinned Node 26 Alpine builder, TypeScript 7.0.2 native, xterm.js 6.0.0, chi 5.2.2, Moby client 0.6.0/API 1.56.0, and modernc SQLite 1.38.2. Lockfiles are committed.
+## Requirements
 
-TypeScript 7.0 does not expose a programmatic compiler API. Astro's checker explicitly still needs TypeScript 6. DockerView follows Microsoft's side-by-side recommendation: `@typescript/native` supplies the TS7 `tsc`; the `typescript` alias supplies `@typescript/typescript6` only to template/lint tooling. `npm run check` runs both Astro check and native TS7 typecheck.
+- Docker Engine 24+ with Compose v2, running and accessible by the current user
+- Go 1.25 or newer
+- Node.js 22 or newer and npm 11 or newer
+- `openssl` and `curl`
+
+The repository pins application dependencies in `backend/go.sum` and `frontend/package-lock.json`. Container builders and runtime base images are pinned by digest.
+
+## Local development with hot reload
+
+Install the exact frontend dependencies and download the Go modules once:
+
+```bash
+make local-setup
+```
+
+Start the Gateway, Server, and Astro development server together:
+
+```bash
+make local
+```
+
+Open <http://localhost:4321>. Astro reloads frontend changes automatically. Its development proxy forwards `/api`, SSE, and terminal WebSockets to the Go Server at `127.0.0.1:8080`. The Server talks to the Gateway at `127.0.0.1:8081`.
+
+The launcher generates an ephemeral shared Gateway secret, stores SQLite state below `.local/`, waits for both Go services to become ready, and stops all child processes on `Ctrl+C`. It does not modify `.env` or the Compose volumes. To reset only local-development state, stop the launcher and remove `.local/`.
+
+Go source changes require restarting `make local`; frontend changes do not. Docker Engine must remain running because the local Gateway connects through the Docker client configuration. On Linux, the current user needs permission to access `/var/run/docker.sock`.
+
+Advanced overrides:
+
+```bash
+DOCKERVIEW_LOCAL_STATE_DIR=/tmp/dockerview-local make local
+DOCKERVIEW_GATEWAY_SECRET="$(openssl rand -hex 32)" make local
+```
+
+## Development environment
+
+Run:
+
+```bash
+cp .env.example .env
+make dev
+```
+
+`make dev` uses the base `compose.yml`, builds the release static frontend and Go binaries, and keeps logs attached to the terminal. It intentionally has no hot reload or source mounts. Configure the public port, browser Origin, HTTPS cookie policy, instance name, and environment label through the environment-specific `.env` before deploying it to a shared Development or QA host. This workflow does not imply production support.
+
+Compose stores the database and generated Gateway credential in named volumes. `docker compose down` preserves them. `docker compose down -v` is an explicit destructive reset of users, sessions, audit events, settings, policies, and the generated credential.
+
+## Required checks
+
+Before committing a change, run:
+
+```bash
+make test
+make lint
+make typecheck
+make security
+docker compose config
+docker compose build dockerview dockerview-gateway
+```
+
+`make security` always runs `npm audit`; it also runs `govulncheck` and Trivy when they are installed locally, while CI always runs the complete scanner set. The unit tests do not execute destructive Docker operations. Integration testing against a disposable container remains opt-in.
+
+TypeScript 7.0 does not expose a programmatic compiler API, while Astro's checker still requires one. `@typescript/native` supplies the TypeScript 7 compiler and the `typescript` alias supplies `@typescript/typescript6` only to template and lint tooling. `npm run check` runs both Astro checking and native TypeScript checking.

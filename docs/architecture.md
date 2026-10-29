@@ -6,4 +6,4 @@ The Server joins a public bridge for its published port and a private `internal:
 
 Docker is the source of truth for runtime metadata. SQLite stores identities and control-plane state, never a permanent container inventory. Scope columns are currently `host/local`, leaving room for later project or host scopes without exposing Projects in V1.
 
-The Astro 7 frontend builds to static files. Go serves those files and `/api/v1`; production does not run Node. Logs travel one-way with SSE and terminals use WebSocket only where bidirectional I/O is required.
+The Astro 7 frontend builds to static files. Go serves those files and `/api/v1`; release images do not run Node. Logs travel one-way with SSE and terminals use WebSocket only where bidirectional I/O is required.

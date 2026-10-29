@@ -3,7 +3,7 @@
 DockerView is a lightweight, self-hosted interface for Docker inspection and controlled troubleshooting. It gives development, QA, and internal operations teams visibility into containers without Linux accounts, SSH keys, Docker group membership, or direct Docker Engine access.
 
 > [!WARNING]
-> Access to the Docker socket is effectively a highly privileged capability. Compromise of the Docker Gateway must be considered potential compromise of the Docker host. DockerView V1 is primarily intended for development and laboratory environments.
+> Access to the Docker socket is effectively a highly privileged capability. Compromise of the Docker Gateway must be considered potential compromise of the host. DockerView V1 is intended for local development, shared Development/QA, and laboratory environments. Deployment in production environments is not recommended.
 
 ## Features
 
@@ -82,6 +82,7 @@ Protected containers remain available for inventory, inspection, metrics, and lo
 
 ```bash
 make dev
+make local
 make build
 make test
 make lint
@@ -89,7 +90,9 @@ make typecheck
 make security
 ```
 
-The production frontend is a static Astro build served by Go; Node is not present at runtime. The pinned frontend uses Astro 7.4.2 and the native Go TypeScript 7.0.2 compiler. Because TypeScript 7.0 has no programmatic API and Astro's template checker still needs one, `astro check` uses the official `@typescript/typescript6` 6.0.2 compatibility package side-by-side; `npm run typecheck` is TS 7 and is mandatory. Details are in [development](docs/development.md).
+`make dev` builds and runs the release images used by shared non-production environments. For workstation development with frontend hot reload, run `make local-setup` once and then `make local`; the local UI is available at <http://localhost:4321>. Details are in [development](docs/development.md).
+
+The release frontend is a static Astro build served by Go; Node is not present at runtime. The pinned frontend uses Astro 7.4.2 and the native Go TypeScript 7.0.2 compiler. Because TypeScript 7.0 has no programmatic API and Astro's template checker still needs one, `astro check` uses the official `@typescript/typescript6` 6.0.2 compatibility package side-by-side; `npm run typecheck` is TS 7 and is mandatory. Details are in [development](docs/development.md).
 
 Backend tests do not perform destructive host operations. Integration testing against a disposable container is opt-in. CI builds and checks Go, Astro/TypeScript, Docker images, Compose, dependencies, and filesystem/container vulnerabilities.
 

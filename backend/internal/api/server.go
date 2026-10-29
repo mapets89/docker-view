@@ -35,16 +35,17 @@ type contextKey string
 const sessionKey contextKey = "session"
 
 type Server struct {
-	Cfg                                                      config.Config
-	Store                                                    *database.Store
-	Gateway                                                  *GatewayClient
-	Auth                                                     auth.Provider
-	loginLimit, bootstrapLimit, terminalLimit, passwordLimit *limiter
-	upgrader                                                 websocket.Upgrader
+	Cfg                                          config.Config
+	Store                                        *database.Store
+	Gateway                                      *GatewayClient
+	Auth                                         auth.Provider
+	loginThrottle                                *loginThrottle
+	bootstrapLimit, terminalLimit, passwordLimit *limiter
+	upgrader                                     websocket.Upgrader
 }
 
 func New(cfg config.Config, store *database.Store) *Server {
-	s := &Server{Cfg: cfg, Store: store, Gateway: NewGatewayClient(cfg.GatewayURL, cfg.GatewaySecret), Auth: auth.LocalProvider{Store: store}, loginLimit: newLimiter(10, 5*time.Minute), bootstrapLimit: newLimiter(5, 10*time.Minute), terminalLimit: newLimiter(10, time.Minute), passwordLimit: newLimiter(5, 10*time.Minute)}
+	s := &Server{Cfg: cfg, Store: store, Gateway: NewGatewayClient(cfg.GatewayURL, cfg.GatewaySecret), Auth: auth.LocalProvider{Store: store}, loginThrottle: newLoginThrottle(5, 20*time.Second), bootstrapLimit: newLimiter(5, 10*time.Minute), terminalLimit: newLimiter(10, time.Minute), passwordLimit: newLimiter(5, 10*time.Minute)}
 	s.upgrader = websocket.Upgrader{ReadBufferSize: 8192, WriteBufferSize: 8192, CheckOrigin: s.originAllowed}
 	return s
 }
@@ -239,25 +240,37 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request) {
 	respond(w, 201, map[string]interface{}{"user": u})
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
-	if !s.loginLimit.allow(clientIP(r)) {
-		s.audit(r, database.User{}, "LOGIN_FAILED", "auth", "", "denied", "rate limited", nil)
-		problemResponse(w, 429, "RATE_LIMITED", "Try again later")
-		return
-	}
 	var in struct{ Username, Password string }
 	if decodeJSON(r, &in) != nil || len(in.Username) > 64 || len(in.Password) > 1024 {
 		problemResponse(w, 400, "INVALID_REQUEST", "Invalid credentials")
 		return
 	}
+	throttleKey := strings.ToLower(strings.TrimSpace(in.Username)) + "|" + clientIP(r)
+	if retryAfter := s.loginThrottle.blocked(throttleKey); retryAfter > 0 {
+		s.loginRateLimited(w, r, in.Username, retryAfter)
+		return
+	}
 	u, ok, err := s.Auth.Authenticate(r.Context(), in.Username, in.Password)
 	if err != nil || !ok {
+		if retryAfter := s.loginThrottle.failed(throttleKey); retryAfter > 0 {
+			s.loginRateLimited(w, r, in.Username, retryAfter)
+			return
+		}
 		s.audit(r, database.User{Username: truncate(in.Username, 64)}, "LOGIN_FAILED", "auth", "", "denied", "invalid credentials", nil)
 		problemResponse(w, 401, "INVALID_CREDENTIALS", "Invalid username or password")
 		return
 	}
+	s.loginThrottle.clear(throttleKey)
 	s.issueSession(w, r, u)
 	s.audit(r, u, "LOGIN_SUCCESS", "auth", "", "success", "", nil)
 	respond(w, 200, map[string]interface{}{"user": u})
+}
+
+func (s *Server) loginRateLimited(w http.ResponseWriter, r *http.Request, username string, retryAfter time.Duration) {
+	seconds := int((retryAfter + time.Second - 1) / time.Second)
+	w.Header().Set("Retry-After", fmt.Sprint(seconds))
+	s.audit(r, database.User{Username: truncate(username, 64)}, "LOGIN_FAILED", "auth", "", "denied", "rate limited", map[string]int{"retry_after_seconds": seconds})
+	problemResponse(w, http.StatusTooManyRequests, "RATE_LIMITED", fmt.Sprintf("Too many failed attempts. Try again in %d seconds", seconds))
 }
 func (s *Server) issueSession(w http.ResponseWriter, r *http.Request, u database.User) {
 	token, csrf, err := s.Store.CreateSession(r.Context(), u.ID, clientIP(r), r.UserAgent(), s.Cfg.SessionTTL)

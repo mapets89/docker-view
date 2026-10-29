@@ -109,6 +109,7 @@ class APIError extends Error {
     message: string,
     readonly code: string,
     readonly status: number,
+    readonly retryAfter?: number,
   ) {
     super(message);
   }
@@ -135,6 +136,8 @@ async function api<T = JSONValue>(
       body.error?.message ?? "Request failed",
       body.error?.code ?? "REQUEST_FAILED",
       response.status,
+      Number.parseInt(response.headers.get("Retry-After") ?? "", 10) ||
+        undefined,
     );
   return body as T;
 }
@@ -150,6 +153,28 @@ function showError(form: HTMLFormElement, error: unknown) {
   if (el)
     el.textContent =
       error instanceof Error ? error.message : "Something went wrong";
+}
+function startLoginCooldown(form: HTMLFormElement, seconds: number) {
+  const error = $<HTMLElement>(".form-error", form);
+  const button = $<HTMLButtonElement>('button[type="submit"]', form);
+  let remaining = Math.max(1, Math.ceil(seconds));
+  if (button) button.disabled = true;
+  const render = () => {
+    if (error)
+      error.textContent = `Try again in ${remaining} second${remaining === 1 ? "" : "s"}.`;
+  };
+  render();
+  const timer = window.setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      render();
+      return;
+    }
+    window.clearInterval(timer);
+    if (button) button.disabled = false;
+    if (error) error.textContent = "You can try again now.";
+    $<HTMLInputElement>('input[name="password"]', form)?.focus();
+  }, 1000);
 }
 function nameOf(c: Container): string {
   return (c.Names?.[0] ?? c.ID ?? c.Id ?? "unknown").replace(/^\//, "");
@@ -273,6 +298,7 @@ async function initAuth() {
     form?.removeAttribute("hidden");
     form?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if ($<HTMLButtonElement>('button[type="submit"]', form)?.disabled) return;
       if (status.needs_setup) {
         const data = new FormData(form);
         if (data.get("password") !== data.get("confirm")) {
@@ -289,7 +315,14 @@ async function initAuth() {
         });
         location.replace("/app/overview/");
       } catch (err) {
-        showError(form, err);
+        if (
+          !status.needs_setup &&
+          err instanceof APIError &&
+          err.code === "RATE_LIMITED" &&
+          err.retryAfter
+        )
+          startLoginCooldown(form, err.retryAfter);
+        else showError(form, err);
       }
     });
   } catch {

@@ -1,7 +1,12 @@
-.PHONY: dev build test lint typecheck security compose-up compose-down clean backend-test frontend-test
+.PHONY: dev local local-setup build test lint typecheck security compose-up compose-down clean backend-test frontend-test
 GOCACHE ?= /tmp/dockerview-go-cache
 dev:
-	docker compose -f compose.yml -f compose.dev.yml up --build
+	docker compose up --build
+local-setup:
+	cd frontend && npm ci
+	cd backend && go mod download
+local:
+	sh ./scripts/local.sh
 build:
 	cd frontend && npm run build
 	cd backend && GOCACHE=$(GOCACHE) go build ./cmd/...

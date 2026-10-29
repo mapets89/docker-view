@@ -314,6 +314,11 @@ button {
   background: #7cf0d2;
   transform: translateY(-1px);
 }
+.primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
 .secondary {
   background: #121b24;
   border: 1px solid var(--line2);
