@@ -25,7 +25,18 @@ Start the Gateway, Server, and Astro development server together:
 make local
 ```
 
-Open <http://localhost:4321>. Astro reloads frontend changes automatically. Its development proxy forwards `/api`, SSE, and terminal WebSockets to the Go Server at `127.0.0.1:8080`. The Server talks to the Gateway at `127.0.0.1:8081`.
+For a fresh local database, create the first administrator in another terminal, from the project directory:
+
+```bash
+cd backend
+DOCKERVIEW_DB_PATH=../.local/dockerview.db go run ./cmd/server bootstrap --username ADMIN
+```
+
+Replace `ADMIN` with the desired username. The command prompts for the password and confirmation; it succeeds only when no user exists. If using `DOCKERVIEW_LOCAL_STATE_DIR`, set `DOCKERVIEW_DB_PATH` to `dockerview.db` in that directory instead.
+
+Open <http://localhost:4321> and sign in. Astro reloads frontend changes automatically. Its development proxy forwards `/api`, SSE, and terminal WebSockets to the Go Server at `127.0.0.1:8080`. The Server talks to the Gateway at `127.0.0.1:8081`.
+
+In local mode the backend does not serve the compiled frontend on port 8080; use Astro on port 4321. Compose serves the built frontend from the server on port 8080.
 
 The launcher generates an ephemeral shared Gateway secret, stores SQLite state below `.local/`, waits for both Go services to become ready, and stops all child processes on `Ctrl+C`. It does not modify `.env` or the Compose volumes. To reset only local-development state, stop the launcher and remove `.local/`.
 
