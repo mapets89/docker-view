@@ -35,17 +35,17 @@ type contextKey string
 const sessionKey contextKey = "session"
 
 type Server struct {
-	Cfg                                          config.Config
-	Store                                        *database.Store
-	Gateway                                      *GatewayClient
-	Auth                                         auth.Provider
-	loginThrottle                                *loginThrottle
-	bootstrapLimit, terminalLimit, passwordLimit *limiter
-	upgrader                                     websocket.Upgrader
+	Cfg                          config.Config
+	Store                        *database.Store
+	Gateway                      *GatewayClient
+	Auth                         auth.Provider
+	loginThrottle                *loginThrottle
+	terminalLimit, passwordLimit *limiter
+	upgrader                     websocket.Upgrader
 }
 
 func New(cfg config.Config, store *database.Store) *Server {
-	s := &Server{Cfg: cfg, Store: store, Gateway: NewGatewayClient(cfg.GatewayURL, cfg.GatewaySecret), Auth: auth.LocalProvider{Store: store}, loginThrottle: newLoginThrottle(5, 20*time.Second), bootstrapLimit: newLimiter(5, 10*time.Minute), terminalLimit: newLimiter(10, time.Minute), passwordLimit: newLimiter(5, 10*time.Minute)}
+	s := &Server{Cfg: cfg, Store: store, Gateway: NewGatewayClient(cfg.GatewayURL, cfg.GatewaySecret), Auth: auth.LocalProvider{Store: store}, loginThrottle: newLoginThrottle(5, 20*time.Second), terminalLimit: newLimiter(10, time.Minute), passwordLimit: newLimiter(5, 10*time.Minute)}
 	s.upgrader = websocket.Upgrader{ReadBufferSize: 8192, WriteBufferSize: 8192, CheckOrigin: s.originAllowed}
 	return s
 }
@@ -224,25 +224,6 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, map[string]interface{}{"product": "DockerView", "needs_setup": n == 0, "instance": instance, "environment": environment})
 }
 
-func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request) {
-	if !s.bootstrapLimit.allow(clientIP(r)) {
-		problemResponse(w, 429, "RATE_LIMITED", "Try again later")
-		return
-	}
-	var in struct{ Username, Password string }
-	if decodeJSON(r, &in) != nil {
-		problemResponse(w, 400, "INVALID_REQUEST", "Invalid request")
-		return
-	}
-	u, err := s.Store.BootstrapAdmin(r.Context(), in.Username, in.Password)
-	if err != nil {
-		problemResponse(w, 409, "BOOTSTRAP_UNAVAILABLE", err.Error())
-		return
-	}
-	s.audit(r, u, "BOOTSTRAP_ADMIN", "user", u.ID, "success", "", nil)
-	s.issueSession(w, r, u)
-	respond(w, 201, map[string]interface{}{"user": u})
-}
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	var in struct{ Username, Password string }
 	if decodeJSON(r, &in) != nil || len(in.Username) > 64 || len(in.Password) > 1024 {
@@ -1030,14 +1011,6 @@ func validateShell(s string) (string, bool) {
 		return s, true
 	}
 	return "", false
-}
-func contains(values []string, want string) bool {
-	for _, v := range values {
-		if v == want {
-			return true
-		}
-	}
-	return false
 }
 func mapKeys(m map[string]string) []string {
 	r := make([]string, 0, len(m))

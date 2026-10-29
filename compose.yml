@@ -2,7 +2,7 @@ name: dockerview
 services:
   dockerview-secret-init:
     build: {context: ., dockerfile: docker/Dockerfile.secret-init}
-    image: dockerview/secret-init:0.1.0
+    image: dockerview/secret-init:1.0.1
     command: ["/bin/sh", "-c", "umask 077; if [ ! -s /secrets/gateway ]; then head -c 48 /dev/urandom | base64 > /secrets/gateway; fi; chmod 0444 /secrets/gateway"]
     volumes: [dockerview-secrets:/secrets]
     read_only: true
@@ -12,7 +12,7 @@ services:
     network_mode: none
   dockerview:
     build: {context: ., dockerfile: docker/Dockerfile}
-    image: dockerview/server:0.1.0
+    image: dockerview/server:1.0.1
     depends_on:
       dockerview-secret-init: {condition: service_completed_successfully}
       dockerview-gateway: {condition: service_healthy}
@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
   dockerview-gateway:
     build: {context: ., dockerfile: docker/Dockerfile.gateway}
-    image: dockerview/gateway:0.1.0
+    image: dockerview/gateway:1.0.1
     depends_on:
       dockerview-secret-init: {condition: service_completed_successfully}
     environment:

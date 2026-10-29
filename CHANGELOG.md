@@ -4,16 +4,24 @@ All notable changes are documented here. This project follows Keep a Changelog c
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-29
+
 ### Added
 
 - Initial DockerView V1 implementation: split Server/Gateway architecture, local auth, sessions, RBAC, policies, audit, inspection, stats, risk analysis, masked environment and inspect, SSE logs, xterm terminal, admin UI, hardened Compose, CI, tests, and security documentation.
 - Added immutable `dockerview.protected=true` enforcement for sensitive containers, blocking exec and restart for every user at both the Server and Gateway layers.
 - Added interactive Docker-host password recovery for local accounts, including session revocation and audit logging.
+- Added local development setup and launcher with frontend hot reload, a separate local database, and an ephemeral Gateway secret.
+- Added application version display to the sidebar and screenshots to the README.
+- Documented SQLite storage, backup, restore, local setup, and administrator recovery; added GitHub issue templates.
 
 ### Changed
 
 - Redesigned the container inventories with responsive table and card layouts, and added sorting by container, status, resources, and risk to both Overview and Containers.
 - Removed opaque internal IDs from the Users table and changed newly generated entity IDs from Base64URL to compact 32-character hexadecimal values.
+- Moved first-administrator creation to an interactive host console command and replaced the web setup form with instructions for local and Compose installations.
+- Disabled serving the compiled frontend from the backend in local development; the Compose server continues to serve the built UI.
+- Hardened authentication and authorization, including login throttling and security controls for bootstrap and protected operations.
 
 ### Fixed
 
