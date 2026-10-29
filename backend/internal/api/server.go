@@ -741,12 +741,18 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Username, Password string
 		Roles              []string
+		Enabled            *bool
 	}
-	if decodeJSON(r, &in) != nil {
+	if err := decodeJSON(r, &in); err != nil {
+		slog.Warn("invalid create user request", "component", "server", "source_ip", clientIP(r), "error", err)
 		problemResponse(w, 400, "INVALID_REQUEST", "Invalid request")
 		return
 	}
-	u, err := s.Store.CreateUser(r.Context(), in.Username, in.Password, in.Roles)
+	enabled := true
+	if in.Enabled != nil {
+		enabled = *in.Enabled
+	}
+	u, err := s.Store.CreateUser(r.Context(), in.Username, in.Password, in.Roles, enabled)
 	if err != nil {
 		problemResponse(w, 400, "USER_CREATE_FAILED", err.Error())
 		return

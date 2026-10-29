@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +19,36 @@ import (
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestCreateUserAcceptsEnabledField(t *testing.T) {
+	store, err := database.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	admin, err := store.BootstrapAdmin(context.Background(), "admin", "correct horse battery staple")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := New(config.Config{}, store)
+	request := httptest.NewRequest(http.MethodPost, "http://localhost/api/v1/users", strings.NewReader(`{"username":"disabled-user","password":"secure password","roles":["role-viewer"],"enabled":false}`))
+	request = request.WithContext(context.WithValue(request.Context(), sessionKey, database.Session{User: admin}))
+	response := httptest.NewRecorder()
+	server.createUser(response, request)
+	if response.Code != http.StatusCreated {
+		t.Fatalf("create user returned %d: %s", response.Code, response.Body.String())
+	}
+	var created database.User
+	if err = json.Unmarshal(response.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	if created.Enabled {
+		t.Fatal("enabled=false was ignored during user creation")
+	}
+	if len(created.Roles) != 1 || created.Roles[0] != "Viewer" {
+		t.Fatalf("unexpected roles: %#v", created.Roles)
+	}
+}
 
 func TestMutableRouteRequiresCSRF(t *testing.T) {
 	store, err := database.Open(":memory:")
@@ -134,7 +165,7 @@ func TestSecretPermissionStillMasksWhenGlobalMaskingDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = store.Close() }()
-	u, err := store.CreateUser(context.Background(), "viewer", "correct horse battery staple", []string{"role-viewer"})
+	u, err := store.CreateUser(context.Background(), "viewer", "correct horse battery staple", []string{"role-viewer"}, true)
 	if err != nil {
 		t.Fatal(err)
 	}

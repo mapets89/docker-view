@@ -161,7 +161,7 @@ func (s *Store) UserCount(ctx context.Context) (int, error) {
 	err := s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&n)
 	return n, err
 }
-func (s *Store) CreateUser(ctx context.Context, username, password string, roles []string) (User, error) {
+func (s *Store) CreateUser(ctx context.Context, username, password string, roles []string, enabled bool) (User, error) {
 	if !security.ValidateUsername(username) {
 		return User{}, errors.New("invalid username")
 	}
@@ -176,7 +176,7 @@ func (s *Store) CreateUser(ctx context.Context, username, password string, roles
 		return User{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if _, err = tx.ExecContext(ctx, `INSERT INTO users(id,username,password_hash,created_at,updated_at) VALUES(?,?,?,?,?)`, id, username, hash, t, t); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO users(id,username,password_hash,enabled,created_at,updated_at) VALUES(?,?,?,?,?,?)`, id, username, hash, enabled, t, t); err != nil {
 		return User{}, errors.New("username already exists")
 	}
 	for _, role := range roles {
